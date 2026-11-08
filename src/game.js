@@ -25,25 +25,27 @@ const glow = c => GC[c] || (GC[c] = (() => {
 })());
 const lt = (x, c, px, py, r, a = 1) => { x.globalAlpha = a; x.drawImage(glow(c), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; };
 
-// ---------- fuente pixel 3x5 ----------
-const FC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 :.%+-/!?><x,';
-const FG = '25755 65656 34443 65556 74647 74644 34553 55755 72227 11152 55655 44447 hrlhh hpljh 25552 65644 25573 65655 34216 72222 55557 55552 hhlrh 55255 55222 71247 75557 26227 61247 61216 55711 74616 34757 71122 75757 75716 00000 02020 00002 51245 02720 00700 11244 22202 61202 42124 12421 05250 00024'.split(' ');
-const gw = g => /[89a-v]/.test(FG[g]) ? 5 : 3;
-const gi = ch => { const g = FC.indexOf(ch); return g < 0 ? FC.indexOf(ch.toUpperCase()) : g; };
+// ---------- fuente vectorial propia ----------
+// cada glifo son trazos sobre una rejilla de 5x7: pares de dígitos "xy" unidos, trazos separados por espacios
+const FC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:.!-+<>/?,';
+const FG = ('062046 1333|06003041423303 3344453606|4130100105163645|06003041453606|40000646 0333|400006 0333|41301001051636454323|0006 4046 0343|1030 2026 1636|4045361605|0006 400346|000646|0600234046|06004640|103041453616050110|06003041423303|103041453616050110 3546|06003041423303 2346|413010010213334445361605|0040 2026|000516364540|002640|0016233640|0046 4006|0023 4023 2326|00400646|' +
+  '103041453616050110 3115|112026 1636|01103041420646|01103041423313 334445361605|36300444|400003334445361605|30100105163645443303|004016|103041423313020110 1304051636454433|43130201103041453616|' +
+  '2222 2626|2626|2024 2626|1333|1333 2224|311335|113315|3016|0110304142322324 2626|2627').split('|').map(g => g.split(' ').map(s => s.match(/../g) || []));
 const tx = (s, x, y, c, sc = 1, al = 0) => {
-  s = '' + s; let w = -sc;
-  for (const ch of s) { const g = gi(ch); if (g >= 0) w += (gw(g) + 1) * sc; }
-  x = round(al == 1 ? x - w / 2 : al == 2 ? x - w : x); y = round(y);
-  X.fillStyle = c;
+  s = ('' + s).toUpperCase(); const u = sc * .95, ad = 6.4 * u, w = s.length * ad - 2.4 * u;
+  x = al == 1 ? x - w / 2 : al == 2 ? x - w : x;
+  X.save(); X.strokeStyle = c; X.lineWidth = .45 * u + .4; X.lineCap = X.lineJoin = 'round';
+  if (sc > 1.5 && c != '#000000') { X.shadowColor = c; X.shadowBlur = 4 + sc * 2; }
+  X.beginPath();
   for (const ch of s) {
-    const g = gi(ch); if (g < 0) continue;
-    const n = gw(g);
-    for (let r = 0; r < 5; r++) { const b = parseInt(FG[g][r], 32); for (let q = 0; q < n; q++) if (b >> n - 1 - q & 1) X.fillRect(x + q * sc, y + r * sc, sc, sc); }
-    x += (n + 1) * sc;
+    const g = FG[FC.indexOf(ch)];
+    if (g) for (const st_ of g) st_.forEach((v, n) => X[n ? 'lineTo' : 'moveTo'](x + v[0] * u, y + v[1] * u));
+    x += ad;
   }
+  X.stroke(); X.restore();
   return w;
 };
-const txs = (s, x, y, c, sc = 1, al = 0) => { tx(s, x, y + sc, '#000000', sc, al); return tx(s, x, y, c, sc, al); };
+const txs = (s, x, y, c, sc = 1, al = 0) => { ga(.6); tx(s, x + sc * .3, y + sc * .7, '#000000', sc, al); ga(1); return tx(s, x, y, c, sc, al); };
 
 // ---------- guardado ----------
 const S = { b: 0, d: 0, m: 0, n: 0 };
@@ -484,7 +486,7 @@ const draw = () => {
   if (st == 'title') {
     ga(.5); fr(0, 0, U, V, '#05040b'); ga(1);
     const lw = tx('AXIOMI', -999, 0, '#000', 9);
-    let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y + 9, '#000000', 9); x += tx(ch, x, y, c, 9) + 9; });
+    let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y, c, 9); x += 6.4 * .95 * 9; });
     txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', U / 2, 96, '#e8e4ff', 2, 1);
     X.setTransform(1, 0, 0, 1, 0, 0); X.globalCompositeOperation = 'lighter'; lt(X, ax.c, W / 2, 290, 120, .35); X.globalCompositeOperation = 'source-over';
     cre(W / 2, 314, 5, 1, 0, t * 9, 0, ax.c, t); X.setTransform(2, 0, 0, 2, 0, 0);
@@ -495,13 +497,20 @@ const draw = () => {
     if (S.b) txs('RECORD ' + S.b + '   PROF ' + S.d + 'M', U / 2, 252, '#ffd75e', 1, 1);
     return;
   }
-  fr(8, 8, 96, 9, '#1a1530'); fr(9, 9, round(94 * L / 100), 7, L < 25 && t % .4 < .2 ? '#ff4060' : '#ffe9a8'); fr(9, 9, round(94 * L / 100), 2, '#ffffff');
-  txs('LUZ', 110, 10, '#ffe9a8');
-  txs(depth + 'M', U - 8, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 8, 28, '#9ad8ff', 1, 2);
+  // barra de luz
+  const lc = L < 25 && t % .4 < .2 ? '#ff4060' : '#ffe9a8';
+  X.lineCap = 'round'; X.lineWidth = 3; X.strokeStyle = '#ffffff22'; X.beginPath(); X.moveTo(12, 13); X.lineTo(108, 13); X.stroke();
+  X.save(); X.shadowColor = lc; X.shadowBlur = 10; X.strokeStyle = lc; X.beginPath(); X.moveTo(12, 13); X.lineTo(12 + 96 * L / 100, 13); X.stroke(); X.restore();
+  txs('LUZ', 116, 10, lc);
+  txs(depth + 'M', U - 10, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 10, 33, '#9ad8ff', 1, 2);
   // brújula de axiomas
   const cx = U - 26, cy = V - 26;
-  for (let k = 0; k < 4; k++) { const a = k * PI / 2 - th, x = round(cx + sin(a) * 13), y = round(cy - cos(a) * 13), on = k == q; fr(x - (on ? 3 : 2), y - (on ? 3 : 2), on ? 7 : 5, on ? 7 : 5, on ? AX[k].c : AX[k].k); }
-  fr(cx, cy - 19, 1, 4, '#ffffff'); fr(cx - 1, cy - 1, 3, 3);
+  X.lineWidth = .8; X.strokeStyle = '#ffffff30'; X.beginPath(); X.arc(cx, cy, 13, 0, 7); X.stroke();
+  for (let k = 0; k < 4; k++) {
+    const a = k * PI / 2 - th, on = k == q; X.save(); if (on) { X.shadowColor = AX[k].c; X.shadowBlur = 10; }
+    X.fillStyle = on ? AX[k].c : AX[k].k; X.beginPath(); X.arc(cx + sin(a) * 13, cy - cos(a) * 13, on ? 3.4 : 2.2, 0, 7); X.fill(); X.restore();
+  }
+  X.strokeStyle = '#ffffff'; X.lineWidth = 1; X.beginPath(); X.moveTo(cx, cy - 7); X.lineTo(cx, cy - 2); X.stroke(); X.beginPath(); X.arc(cx, cy, 1.2, 0, 7); X.fillStyle = '#ffffff'; X.fill();
   txs(ax.n, U - 46, V - 29, ax.c, 1, 2);
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
   if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA CORRER. BAJA.', U / 2, V - 20, '#e8e4ff', 1, 1);
