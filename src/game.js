@@ -1,20 +1,23 @@
 // AXIOMI — gira el mundo, cambia sus reglas. Todo dibujado y sonado con código.
+// El mundo se pinta en pixel art a 480x270 (cada píxel del juego son 2x2 en pantalla) y se escala sin suavizado.
 (() => {
 'use strict';
-const W = 960, H = 540, Z = 2, T = 12, CW = 20, RH = 12, G = 650, MV = 400;
+const W = 960, H = 540, U = 480, V = 270, RW = 256, RH = 176, NC = 5, WW = RW * NC, G = 650, MV = 400;
 const { floor, min, max, abs, sin, cos, hypot, PI, random: rnd, round, sqrt, ceil } = Math, D = document;
 const cl = (v, a, b) => v < a ? a : v > b ? b : v, lp = (a, b, k) => a + (b - a) * k;
 const rr = (a, b) => a + rnd() * (b - a), ri = (a, b) => floor(rr(a, b + 1)), pk = a => a[floor(rnd() * a.length)];
 const hs = (i, j) => { let h = Math.imul(i | 0, 374761393) + Math.imul(j | 0, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
 const mk = (w, h) => { const c = D.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; };
-const cv = D.getElementById('c'), X = cv.getContext('2d');
+const cv = D.getElementById('c'), O = cv.getContext('2d');
 cv.width = W; cv.height = H;
+const [LC, LX] = mk(U, V), [DC, DX] = mk(U, V);
+let X = LX; // contexto activo: LX (mundo en baja resolución) u O (interfaz nítida)
 const fr = (x, y, w, h, c) => { if (c) X.fillStyle = c; X.fillRect(x, y, w, h); }, ga = a => X.globalAlpha = a;
-const [DC, DX] = mk(W, H);
 const rsz = () => { const s = min(innerWidth / W, innerHeight / H); cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; };
 onresize = rsz; rsz();
 const hx = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
 const mix = (a, b, k) => { a = hx(a); b = hx(b); return '#' + a.map((v, i) => (round(lp(v, b[i], k)) | 256).toString(16).slice(1)).join(''); };
+const u32 = (h, a = 255) => { const [r, g, b] = hx(h); return (a << 24 | b << 16 | g << 8 | r) >>> 0; };
 
 // ---------- luz ----------
 const GC = {};
@@ -23,7 +26,7 @@ const glow = c => GC[c] || (GC[c] = (() => {
   g.addColorStop(0, c); g.addColorStop(.3, c + '70'); g.addColorStop(1, c + '00');
   x.fillStyle = g; x.fillRect(0, 0, 64, 64); return k;
 })());
-const lt = (x, c, px, py, r, a = 1) => { x.globalAlpha = a; x.drawImage(glow(c), px - r, py - r, r * 2, r * 2); x.globalAlpha = 1; };
+const lt = (x, c, px, py, r, a = 1) => { x.globalAlpha = a; x.imageSmoothingEnabled = true; x.drawImage(glow(c), px - r, py - r, r * 2, r * 2); x.imageSmoothingEnabled = false; x.globalAlpha = 1; };
 
 // ---------- fuente vectorial propia ----------
 // cada glifo son trazos sobre una rejilla de 5x7: pares de dígitos "xy" unidos, trazos separados por espacios
@@ -115,179 +118,189 @@ const mus = dt => {
   if (stp % 4 == 2) nz(.03, .025, 7000);
 };
 
+
 // ---------- mundo ----------
-// plano grueso (12 px): 0 aire · 1 roca · 2..5 materia del axioma 0..3 · 6 espinas · 7 lámpara
-// el plano se deforma con ruido sobre una rejilla fina (4 px) y se contornea con marching squares:
-// así las cuevas son orgánicas y la colisión coincide exactamente con lo que se ve.
-let st = 'title', t = 0, th = 0, rv = 0, q = 0, pq = 0, M = new Map(), gy = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
-  vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, pgx = 8, pgw = 4, rec = 0, lpT = 0, DM = [];
-const Zr = new Uint8Array(CW);
-const tile = (i, j) => i < 0 || i >= CW || j < 0 ? 1 : (M.get(j) || Zr)[i];
-const DN = [0, 1, 3]; // axiomas en los que la gravedad aún apunta hacia abajo
-
-const gen = () => {
-  const j0 = gy, d = min(1, j0 / 1400), R = [], F = RH - 1;
-  for (let k = 0; k < RH; k++) R.push(new Uint8Array(CW));
-  const st_ = (i, k, v) => { if (i >= 0 && i < CW && k >= 0 && k < RH) R[k][i] = v; };
-  const gw = j0 < 40 ? 4 : 3 + (rnd() < .35 - d * .3), pat = j0 < 30 ? 0 : pk(j0 < 140 ? [0, 0, 3, 1] : j0 < 300 ? [0, 1, 3, 2, 4] : [0, 1, 2, 2, 3, 4, 4]);
-  let gx = ri(1, CW - gw - 1), a = pk(DN);
-  if (pat == 4) gx = a == 1 ? CW - gw : a == 3 ? 0 : gx;
-  if (pat == 1 && j0 < 200) a = 0;
-  const inGap = i => i >= gx && i < gx + gw, near = (i, k) => abs(i - (k + .5)) < 3;
-  if (pat == 1) R[F].fill(2 + a);
-  else if (pat == 2) { const b = pk(DN.filter(v => v != a)), sp = ri(5, CW - 5); for (let i = 0; i < CW; i++) R[F][i] = 2 + (i < sp ? a : b); }
-  else {
-    for (let i = 0; i < CW; i++) R[F][i] = inGap(i) ? pat == 3 ? 2 + a : 0 : 1;
-    if (pat == 4) {
-      for (let i = 0; i < CW; i++) if (!inGap(i)) { st_(i, F - 1, 6); if (!(a == 3 ? i > CW - 4 : a == 1 ? i < 3 : 0)) st_(i, F - 4, 2 + a); }
-    } else if (d > .1) for (let i = 0; i < CW; i++) if (!inGap(i) && abs(i - gx - gw / 2) > gw / 2 + 1.5 && !near(i, pgx + pgw / 2 - .5) && rnd() < d * .7) st_(i, F - 1, 6);
-  }
-  if (j0) {
-    for (let n = ri(1, 2 + (d * 2 | 0)); n--;) {
-      const k = ri(3, F - 4), w = ri(2, 5), i0 = ri(0, CW - w), v = rnd() < .3 + d * .3 ? 2 + ri(0, 3) : 1;
-      for (let i = i0; i < i0 + w; i++) st_(i, k, v);
-      if (v == 1 && rnd() < d * .8) st_(i0 + ri(0, w - 1), k - 1, 6);
-    }
-    if (rnd() < .5) st_(rnd() < .5 ? 0 : CW - 1, ri(2, F - 3), 7);
-    for (let n = ri(1, 3); n--;) { const i = ri(1, CW - 2), k = ri(1, F - 3); if (!R[k][i] && !R[k + 1][i]) E.push({ x: i * T + 6, y: (j0 + k) * T + 6, ph: rnd() * 6 }); }
-  }
-  pgx = gx; pgw = gw;
-  R.forEach((r, k) => M.set(j0 + k, r)); gy += RH;
-};
-
-const C = 4, PX = 48, FW = (CW * T + PX * 2) / C, FH = RH * T / C, CH = FH * C, PAD = 30;
-const MT = new Map(), CF = new Map(), CC = new Map();
+// El pozo es una rejilla de salas (5 de ancho, infinitas hacia abajo). En cada fila un camino
+// entra por arriba, recorre túneles horizontales hacia un lado y vuelve a caer: así hay pozos,
+// túneles, cámaras y cuevas laterales. Las cuevas se tallan con cápsulas deformadas por ruido,
+// píxel a píxel: lo que ves es exactamente lo que colisiona.
+// materia: 0 aire · 1 roca · 2..5 materia del axioma 0..3
+let st = 'title', t = 0, th = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
+  vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
+let RM = new Map(), CP = [], CO = [], EX = [], WP = [], gr = 0, pc = 2, pdx = 0, pdr = 0;
+const room = (i, j) => i < 0 || i >= NC ? 0 : RM.get(j * 8 + i);
 const vn = (x, y) => { const i = floor(x), j = floor(y), u = x - i, v = y - j, s = k => k * k * (3 - 2 * k); return lp(lp(hs(i, j), hs(i + 1, j), s(u)), lp(hs(i, j + 1), hs(i + 1, j + 1), s(u)), s(v)) * 2 - 1; };
-const cells = k => {
-  let m = MT.get(k); if (m) return m;
-  while (gy < (k + 2) * RH) gen();
-  m = new Uint8Array(FW * FH);
-  for (let j = 0; j < FH; j++) for (let i = 0; i < FW; i++) {
-    const x = i * C - PX + 2, y = (k * FH + j) * C + 2;
-    const wb = max(0, vn(x < 120 ? 3.3 : 8.7, y * .022)) * 11, dx = vn(x * .045, y * .045) * 6 + vn(x * .18 + 50, y * .18) * 1.6 + (x < 26 ? -wb : x > CW * T - 26 ? wb : 0),
-      v = tile(floor((x + dx) / T), floor((y + vn(x * .045 + 40, y * .045 + 70) * 6.5 + vn(x * .16, y * .16 + 9) * 1.5) / T));
-    m[j * FW + i] = v < 6 ? v : 0;
+
+// cápsula de radio variable entre dos puntos (con su caja para filtrar rápido)
+const cap = (a, b, ra, rb) => CP.push([a[0], a[1], ra, b[0], b[1], rb, min(a[0] - ra, b[0] - rb), min(a[1] - ra, b[1] - rb), max(a[0] + ra, b[0] + rb), max(a[1] + ra, b[1] + rb)]);
+// conecta cada salida con el centro de la sala mediante un túnel curvo
+const carve = (R, ex, rc) => {
+  const c = R.c;
+  for (const [x, y, r] of ex) {
+    const dx = c[0] - x, dy = c[1] - y, l = hypot(dx, dy) || 1, j = rr(-.3, .3) * l, m = [x + dx / 2 - dy / l * j, y + dy / 2 + dx / l * j], rm = (r + rc) / 2;
+    cap([x, y], m, r, rm); cap(m, c, rm, rc); R.sd.push(m); EX.push([x, y]);
   }
-  MT.set(k, m); return m;
 };
-const cell = (i, j) => i < 0 || i >= FW || j < 0 ? 1 : cells(floor(j / FH))[(j % FH) * FW + i];
-// campos en las esquinas: 0 roca, 1..4 materia de cada axioma
-const corn = k => {
-  let c = CF.get(k); if (c) return c;
-  c = [0, 1, 2, 3, 4].map(() => new Float32Array((FW + 1) * FH));
-  for (let j = k * FH; j < (k + 1) * FH; j++) for (let i = 0; i <= FW; i++)
-    for (const m of [cell(i - 1, j - 1), cell(i, j - 1), cell(i - 1, j), cell(i, j)]) if (m) c[m - 1][(j - k * FH) * (FW + 1) + i] += .25;
-  CF.set(k, c); return c;
-};
-const cf = (i, j, s) => i < 0 || i > FW || j < 0 ? +!s : corn(floor(j / FH))[s][(j % FH) * (FW + 1) + i];
-// campo sólido (>.5 = dentro) con interpolación bilineal; coincide con el contorno dibujado
-const fld = (x, y) => {
-  const gx = (x + PX) / C, gy_ = y / C, i = floor(gx), j = floor(gy_), u = gx - i, v = gy_ - j;
-  let f = 0;
-  for (const s of [0, q + 1]) f += lp(lp(cf(i, j, s), cf(i + 1, j, s), u), lp(cf(i, j + 1, s), cf(i + 1, j + 1, s), u), v);
-  return f;
+const gen = () => {
+  const ry = gr++, oy = ry * RH, d = min(1, ry / 45), Rs = [];
+  for (let i = 0; i < NC; i++) {
+    const R = { rx: i, ry, ox: i * RW, oy, k: 0, sd: [], img: [], ux: -1e3, c: [i * RW + RW / 2 + rr(-60, 60), oy + RH / 2 + rr(-38, 38)] };
+    Rs.push(R); RM.set(ry * 8 + i, R);
+  }
+  const c = pc, c2 = ry && rnd() < .8 ? cl(c + pk([-3, -2, -1, -1, 1, 1, 2, 3]), 0, NC - 1) : c, lo = min(c, c2), hi = max(c, c2), hb_ = [];
+  for (let i = lo; i < hi; i++) hb_[i] = [(i + 1) * RW, oy + rr(52, RH - 52), rr(19, 27)];
+  const dx = c2 * RW + rr(60, RW - 60), dr = rr(18, 25);
+  if (!ry) Rs[c].c = [c * RW + RW / 2, 76];
+  for (let i = lo; i <= hi; i++) {
+    const R = Rs[i], ex = []; R.k = 1; R.lamp = rnd() < .3;
+    if (ry && i == c) { ex.push([pdx, oy, pdr]); R.ux = pdx; }
+    if (i == c2) ex.push([dx, oy + RH, dr]);
+    if (i > lo) ex.push(hb_[i - 1]);
+    if (i < hi) ex.push(hb_[i]);
+    carve(R, ex, ry ? rr(24, 46) : 48);
+    for (const m of [...R.sd, R.c]) if (ry && rnd() < .55) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
+    // islas de materia de color dentro de las cámaras
+    if (ry > 1 && rnd() < .25 + d * .45) { const a = rnd() * 7, rb = rr(9, 17), x = R.c[0] + cos(a) * rr(8, 36), y = R.c[1] + sin(a) * rr(8, 26); CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
+  }
+  // camino de puntos (lo usa el bot de pruebas)
+  for (let i = c, s = c2 > c ? 1 : -1; ; i += s) { WP.push(Rs[i].c); if (i == c2) break; WP.push(hb_[s > 0 ? i : i - 1]); }
+  WP.push([dx, oy + RH]);
+  // cuevas laterales sin salida, con semillas y a veces una lámpara
+  if (ry) for (const i of [lo - 1, hi + 1]) if (i >= 0 && i < NC && rnd() < .45) {
+    const R = Rs[i], b = [i < lo ? lo * RW : i * RW, oy + rr(52, RH - 52), rr(17, 22)];
+    R.k = 2; R.lamp = rnd() < .65; carve(R, [b], rr(22, 34)); carve(Rs[i < lo ? lo : hi], [b], 22);
+    for (let n = 3; n--;) E.push({ x: R.c[0] + rr(-12, 12), y: R.c[1] + rr(-10, 10), ph: rnd() * 6 });
+  }
+  // tapones de color en las salidas: sólo los atraviesas en un axioma en el que sean fantasma
+  const pl = ry > 2 ? .22 + d * .45 : 0;
+  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i]; CO.push([ri(0, 3), x - 5, y - r - 18, x + 5, y + r + 18]); }
+  if (ry > 1 && rnd() < pl) CO.push([ri(0, 3), dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]);
+  pc = c2; pdx = dx; pdr = dr;
 };
 
-// ---------- trozos de escenario cacheados (uno por sala y axioma) ----------
-const chunk = (k, qq) => {
-  const key = k * 4 + qq; let cc = CC.get(key); if (cc) return cc;
-  const [cn, x] = mk(FW * C * Z, (CH + PAD * 2) * Z);
-  x.imageSmoothingEnabled = true; x.scale(Z, Z); x.translate(PX, PAD - k * CH);
-  x.lineCap = x.lineJoin = 'round';
-  const ac = AX[qq].c, tip = mix(ac, '#ffffff', .35), j0 = k * FH, I0 = k * RH;
-  // contorno de una materia: devuelve el relleno y los segmentos del borde con su normal exterior
-  const iso = s => {
-    const Pp = new Path2D(), Sg = [];
-    for (let j = j0; j < j0 + FH; j++) for (let i = 0; i < FW; i++) {
-      const a = cf(i, j, s), b = cf(i + 1, j, s), c = cf(i + 1, j + 1, s), d = cf(i, j + 1, s);
-      if (a + b + c + d == 0) continue;
-      const X0 = i * C - PX, Y0 = j * C;
-      if (a > .5 && b > .5 && c > .5 && d > .5) { Pp.rect(X0, Y0, C, C); continue; }
-      const cs = [[a, X0, Y0], [b, X0 + C, Y0], [c, X0 + C, Y0 + C], [d, X0, Y0 + C]], pts = [], cr_ = [];
-      for (let n = 0; n < 4; n++) {
-        const [va, xa, ya] = cs[n], [vb, xb, yb] = cs[(n + 1) % 4];
-        if (va > .5) pts.push([xa, ya]);
-        if ((va > .5) != (vb > .5)) { const f = (.5 - va) / (vb - va), e = [xa + (xb - xa) * f, ya + (yb - ya) * f]; pts.push(e); cr_.push(e); }
-      }
-      if (pts.length > 2) { Pp.moveTo(...pts[0]); for (const e of pts) Pp.lineTo(...e); Pp.closePath(); }
-      const gx = b + c - a - d, gy_ = c + d - a - b, gl = hypot(gx, gy_) || 1;
-      for (let n = 0; n + 1 < cr_.length; n += 2) Sg.push([...cr_[n], ...cr_[n + 1], -gx / gl, -gy_ / gl]);
+// rejilla de materia de una sala, más sus púas y lámparas
+const mapR = R => {
+  const { ox, oy } = R, m = R.m = new Uint8Array(RW * RH);
+  const cs = CP.filter(c => c[8] > ox - 20 && c[6] < ox + RW + 20 && c[9] > oy - 20 && c[7] < oy + RH + 20),
+    co = CO.filter(c => c[3] > ox && c[1] < ox + RW && c[4] > oy && c[2] < oy + RH);
+  R.sp = []; R.lp = [];
+  if (!cs.length) { m.fill(1); return m; }
+  for (let j = 0; j < RH; j++) for (let i = 0; i < RW; i++) {
+    const x = ox + i, y = oy + j, n = vn(x * .035, y * .035) * 6.5 + vn(x * .12 + 9, y * .12) * 2;
+    let dm = 1e9;
+    for (const [ax, ay, ra, bx, by, rb] of cs) {
+      const ex = bx - ax, ey = by - ay, u = cl(((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey || 1), 0, 1), dd = hypot(x - ax - ex * u, y - ay - ey * u) - lp(ra, rb, u);
+      if (dd < dm) dm = dd;
     }
-    return [Pp, Sg];
-  };
-  const seg = (Sg, c, w, al) => { x.globalAlpha = al; x.strokeStyle = c; x.lineWidth = w; x.beginPath(); for (const [a, b, c_, d] of Sg) { x.moveTo(a, b); x.lineTo(c_, d); } x.stroke(); x.globalAlpha = 1; };
-  const line = (pts, w) => { x.lineWidth = w; x.beginPath(); x.moveTo(...pts[0]); for (let n = 1; n < pts.length; n++) x.lineTo(...pts[n]); x.stroke(); };
-  // roca: silueta negra con borde de luz
-  const [RP, RS] = iso(0);
-  x.fillStyle = x.strokeStyle = '#030207'; x.fill(RP); x.lineWidth = .7; x.stroke(RP);
-  seg(RS, mix(ac, '#ffffff', .25), 1.4, .25); seg(RS, tip, .6, .8);
-  // flora en siluetas: hierba, helechos, hongos, raíces colgantes
-  x.strokeStyle = x.fillStyle = '#030207';
-  for (const [a, b, c_, d, nx, ny] of RS) {
-    const mx = (a + c_) / 2, my = (b + d) / 2, h = hs(round(mx * 3), round(my * 3)), h2 = hs(round(my * 7), round(mx * 5));
-    if (mx < -6 || mx > CW * T + 6) continue;
-    if (ny < -.6) {
-      if (h < .5) for (let n = 0; n < 1 + (h2 * 3 | 0); n++) {
-        const bx = mx + n * 1.3 - 1, ln = 3 + hs(n, round(mx * 9)) * 7, bend = (h2 - .5) * 5;
-        x.lineWidth = .9; x.beginPath(); x.moveTo(bx, my + 1); x.quadraticCurveTo(bx + bend * .3, my - ln * .6, bx + bend, my - ln); x.stroke();
-        if (h2 < .45) { x.fillStyle = tip; x.fillRect(bx + bend - .5, my - ln - .5, 1.2, 1.2); x.fillStyle = '#030207'; }
-      }
-      else if (h < .56) { // hongo
-        const hh = 5 + h2 * 9, cw = 3 + h2 * 4;
-        x.lineWidth = 1.4; x.beginPath(); x.moveTo(mx, my + 1); x.quadraticCurveTo(mx + 2, my - hh / 2, mx + .5, my - hh); x.stroke();
-        x.beginPath(); x.ellipse(mx + .5, my - hh, cw, cw * .55, 0, PI, 0); x.fill();
-        x.fillStyle = ac; for (let n = -1; n <= 1; n++) x.fillRect(mx + .5 + n * cw * .55 - .5, my - hh + .4, 1, 1); x.fillStyle = '#030207';
-      } else if (h < .62) { // helecho
-        const ln = 8 + h2 * 8, dir = h2 < .5 ? -1 : 1;
-        const pts = []; for (let n = 0; n <= 8; n++) { const u = n / 8; pts.push([mx + dir * u * u * ln * .6, my - u * ln]); }
-        line(pts, 1);
-        for (let n = 2; n < 8; n++) { const [px_, py_] = pts[n], fl_ = (9 - n) * .5; x.lineWidth = .6; x.beginPath(); x.moveTo(px_, py_); x.lineTo(px_ - fl_, py_ - fl_ * .4); x.moveTo(px_, py_); x.lineTo(px_ + fl_, py_ - fl_ * .4); x.stroke(); }
-      }
-    } else if (ny > .6 && h < .32) { // raíces que cuelgan del techo
-      const ln = 5 + h2 * 24, pts = [];
-      for (let n = 0; n <= 10; n++) { const u = n / 10; pts.push([mx + sin(u * 4 + h * 20) * u * 3, my - 1 + u * ln]); }
-      line(pts, 1.3 - h2 * .6);
-      if (h < .06) { x.fillStyle = tip; x.beginPath(); x.arc(pts[10][0], pts[10][1] + 1.5, 1.6, 0, 7); x.fill(); x.fillStyle = '#030207'; }
-    } else if (abs(nx) > .7 && h < .15) { // musgo en las paredes
-      for (let n = 0; n < 3; n++) { x.beginPath(); x.arc(mx + nx * 1.2, my + (n - 1) * 1.6, 1.1 + h2, 0, 7); x.fill(); }
+    let v = dm + n < 0 ? 0 : 1;
+    if (!v) for (const [k, a, b, c, d, cx, cy, r] of co) if (x >= a && x < c && y >= b && y < d && (!r || hypot(x - cx, y - cy) - r + n * .5 < 0)) v = k + 2;
+    m[j * RW + i] = v;
+  }
+  const mt = (x, y) => { x = floor(x) - ox; y = floor(y) - oy; return x < 0 || y < 0 || x >= RW || y >= RH ? 1 : m[y * RW + x]; };
+  // púas: grupos sobre suelos, techos y paredes, nunca junto a una salida
+  const ns = R.k && R.ry > 1 ? ri(0, 1 + min(3, R.ry / 12)) : 0;
+  for (let n = 0; n < ns; n++) {
+    const s = pk([...R.sd, R.c]), [nx, ny] = pk([[0, -1], [0, -1], [0, 1], [1, 0], [-1, 0]]), len = ri(3, 8);
+    let bx = floor(s[0]), by = floor(s[1]), f = 0;
+    for (let k = 0; k < 90 && !f; k++) if (mt(bx - nx, by - ny) == 1) f = 1; else { bx -= nx; by -= ny; }
+    if (f) for (let k = -len >> 1; k < len >> 1; k++) {
+      let x = bx - ny * k * 5, y = by + nx * k * 5, ok = 0;
+      for (let z = -6; z <= 6 && !ok; z++) { const xx = x + nx * z, yy = y + ny * z; if (!mt(xx, yy) && mt(xx - nx, yy - ny) == 1) { x = xx; y = yy; ok = 1; } }
+      if (ok && !EX.some(e => hypot(e[0] - x, e[1] - y) < 52) && !(ny < 0 && abs(x - R.ux) < 48)) R.sp.push([x, y, nx, ny]);
     }
   }
-  // espinas y lámparas (en el plano grueso)
-  for (let J = I0; J < I0 + RH; J++) for (let I = 0; I < CW; I++) {
-    const v = tile(I, J), bx = I * T, by = J * T;
-    if (v == 6) for (let n = 0; n < 4; n++) {
-      const sx = bx + 1 + n * 3 + hs(I + n, J) * 1.5, hh = 7 + hs(J, I + n) * 5, lean = (hs(I * 3, J + n) - .5) * 3;
-      x.fillStyle = '#030207'; x.beginPath(); x.moveTo(sx - 1.6, by + T + 1); x.lineTo(sx + lean, by + T - hh); x.lineTo(sx + 1.6, by + T + 1); x.fill();
-      x.fillStyle = '#ff2e55'; x.beginPath(); x.moveTo(sx + lean * .75 - .7, by + T - hh * .72); x.lineTo(sx + lean, by + T - hh); x.lineTo(sx + lean * .75 + .7, by + T - hh * .72); x.fill();
-    }
-    if (v == 7) {
-      const s = I ? -1 : 1, wx = I ? CW * T + 2 : -2, cx = bx + 6, cy = by + 7, on = qq == 2;
-      x.strokeStyle = '#030207'; line([[wx, by + 1], [wx + s * 4, by - 2], [cx, by + 1], [cx, cy - 3]], 1.2);
-      x.fillStyle = '#030207'; x.beginPath(); x.ellipse(cx, cy, 3.6, 4.4, 0, 0, 7); x.fill();
-      x.fillStyle = on ? '#ffe6a8' : '#4a3418'; x.beginPath(); x.ellipse(cx, cy + .5, 2.3, 3, 0, 0, 7); x.fill();
-      if (on) { x.fillStyle = '#ffffff'; x.fillRect(cx - .6, cy - .5, 1.2, 2); }
-    }
+  // lámpara colgada del techo de la cámara
+  if (R.lamp) { const x = floor(R.c[0]); let y = floor(R.c[1]); for (let k = 0; k < 110 && !mt(x, y - 1); k++) y--; if (mt(x, y - 1) == 1 && R.c[1] - y > 14) R.lp.push([x, y]); }
+  return m;
+};
+const mat = (x, y) => {
+  x = floor(x); y = floor(y);
+  if (x < 0 || x >= WW || y < 0) return 1;
+  const R = room(floor(x / RW), floor(y / RH));
+  return R ? (R.m || mapR(R))[(y - R.oy) * RW + x - R.ox] : 1;
+};
+const sol = (x, y) => { const v = mat(x, y); return v == 1 || v == q + 2; };
+
+// ---------- pixel art de cada sala (una imagen por axioma) ----------
+const rend = (R, qq) => {
+  const w = RW + 2, h = RH + 2, [cn, x] = mk(w, h), id = x.createImageData(w, h), b = new Uint32Array(id.data.buffer);
+  const ac = AX[qq].c, ox = R.ox - 1, oy = R.oy - 1, pw = w + 6, cs = new Uint8Array(pw * (h + 6)), mv = new Uint8Array(pw * (h + 6));
+  if (!R.m) mapR(R);
+  for (let j = 0; j < h + 6; j++) for (let i = 0; i < pw; i++) { const v = mat(ox + i - 3, oy + j - 3), n = j * pw + i; mv[n] = v; cs[n] = v < 2 ? v : v == qq + 2 ? 2 : 3; }
+  // clases: 0 aire · 1 roca · 2 materia sólida · 3 materia fantasma
+  const C = (i, j) => cs[(j + 3) * pw + i + 3], open = c => c == 0 || c == 3;
+  const K = [mix(ac, '#ffffff', .35), mix(ac, '#040309', .35), mix(ac, '#040309', .72), '#040309', '#0c0a17', mix(ac, '#040309', .55)].map(c => u32(c));
+  const MC = AX.map(a => [mix(a.c, '#05040b', .62), mix(a.c, '#05040b', .48), mix(a.c, '#ffffff', .45), a.c].map(c => u32(c))), GH = AX.map(a => [u32(a.c, 170), u32(a.c, 55)]);
+  const set = (i, j, c) => { if (i >= 0 && j >= 0 && i < w && j < h) b[j * w + i] = c; };
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const c = C(i, j), x_ = ox + i, y_ = oy + j;
+    if (!c) continue;
+    const v = mv[(j + 3) * pw + i + 3] - 2, df = (a, b_) => { const e = C(a, b_); return c == 1 ? open(e) : e != c; },
+      e1 = df(i - 1, j) || df(i + 1, j) || df(i, j - 1) || df(i, j + 1), e2 = df(i - 2, j) || df(i + 2, j) || df(i, j - 2) || df(i, j + 2), n = j * w + i;
+    if (c == 1) {
+      const e4 = df(i - 3, j) || df(i + 3, j) || df(i, j - 3) || df(i, j + 3) || df(i - 4, j) || df(i + 4, j) || df(i, j - 4) || df(i, j + 4);
+      b[n] = open(C(i, j - 1)) ? K[0] : e1 ? K[1] : e2 ? K[2] : e4 && (x_ + y_) & 1 ? K[2] : hs(x_ >> 1, y_ >> 1) < .045 ? K[4] : K[3];
+      if (!C(i, j - 1) && C(i - 1, j) && C(i + 1, j) && !C(i - 1, j - 1) && !C(i + 1, j - 1)) { // hierba, hongos
+        const g = hs(x_, y_ * 3), g2 = hs(y_, x_);
+        if (g < .45) { const hh = 1 + (g2 * 5 | 0); for (let k = 1; k <= hh; k++) if (!C(i, j - k)) set(i, j - k, k == hh && g < .08 ? K[0] : K[3]); }
+        else if (g < .47 && !C(i, j - 7)) {
+          const hh = 2 + (g2 * 3 | 0);
+          for (let k = 1; k <= hh; k++) set(i, j - k, K[3]);
+          for (let k = -2; k <= 2; k++) set(i + k, j - hh - 1, K[3]);
+          for (let k = -1; k <= 1; k++) set(i + k, j - hh - 2, K[3]);
+          set(i - 1, j - hh - 1, MC[qq][3]); set(i + 1, j - hh - 2, MC[qq][3]);
+        }
+      }
+      if (!C(i, j + 1) && !C(i - 1, j + 1) && !C(i + 1, j + 1) && hs(x_ * 3, y_) < .16) { // raíces colgantes
+        const ln = 2 + (hs(y_, x_ * 7) * 16 | 0);
+        let k = 1;
+        for (; k <= ln; k++) { const xo = round(sin(k * .45 + x_) * 1.2); if (C(i + xo, j + k)) break; set(i + xo, j + k, K[3]); }
+        if (k > ln && hs(x_, y_ * 5) < .2) { set(i, j + k, K[0]); set(i + 1, j + k, K[0]); set(i, j + k + 1, K[5]); set(i + 1, j + k + 1, K[5]); }
+      }
+    } else if (c == 2) b[n] = e1 ? MC[v][2] : e2 ? MC[v][3] : ((x_ + y_) >> 2) % 3 ? MC[v][0] : MC[v][1];
+    else b[n] = e1 ? (x_ + y_) & 1 ? GH[v][0] : 0 : x_ % 4 == 0 && y_ % 4 == 0 ? GH[v][1] : 0;
   }
-  // materia de los axiomas: sólida en su axioma, fantasma en los demás
-  for (let kk = 0; kk < 4; kk++) {
-    const [MP, MS] = iso(kk + 1), c = AX[kk].c;
-    if (!MS.length) continue;
-    if (kk == qq) {
-      x.fillStyle = mix(c, '#05040b', .62); x.strokeStyle = x.fillStyle; x.fill(MP); x.lineWidth = .7; x.stroke(MP);
-      x.save(); x.clip(MP); x.globalAlpha = .35; x.strokeStyle = c; x.lineWidth = .6; x.beginPath();
-      for (let n = -40; n < 140; n++) { const yy = k * CH + n * 5 - 200; x.moveTo(-PX, yy); x.lineTo(CW * T + PX, yy + 120); } x.stroke(); x.restore();
-      seg(MS, c, 2.4, .35); seg(MS, mix(c, '#ffffff', .4), 1, 1);
-    } else { x.setLineDash([2, 2.5]); seg(MS, c, .9, .5); x.setLineDash([]); }
+  // púas
+  const SPK = [u32('#040309'), u32('#7a1028'), u32('#ff2e55'), u32('#ffb0c0')];
+  for (const [sx, sy, nx, ny] of R.sp) for (let s = 0; s < 9; s++) {
+    const hw = [3, 3, 2, 2, 1, 1, 1, 0, 0][s];
+    for (let k = -hw; k <= hw; k++) set(sx + nx * s - ny * k - ox, sy + ny * s + nx * k - oy, SPK[s < 3 ? 0 : s < 5 ? 1 : s < 8 ? 2 : 3]);
   }
-  CC.set(key, cn); return cn;
+  // lámparas: sólo se encienden en BRASA
+  const on = qq == 2, LC_ = [u32('#040309'), u32(on ? '#ffe6a8' : '#4a3418'), u32('#ffffff')];
+  for (const [lx, ly] of R.lp) {
+    const i = lx - ox, j = ly - oy;
+    for (let k = 0; k < 3; k++) set(i, j + k, LC_[0]);
+    for (let a = -2; a <= 2; a++) for (let k = 3; k < 10; k++) set(i + a, j + k, abs(a) < 2 && k > 3 && k < 9 ? LC_[1] : LC_[0]);
+    if (on) set(i, j + 5, LC_[2]);
+  }
+  x.putImageData(id, 0, 0); return cn;
+};
+
+// fondo: dos capas de columnas en silueta que se repiten, con paralaje
+const BG = {};
+const vp = (x, y, px, py) => {
+  const i = floor(x), j = floor(y), u = x - i, v = y - j, s = k => k * k * (3 - 2 * k), h = (a, b) => hs((a % px + px) % px + 77, (b % py + py) % py);
+  return lp(lp(h(i, j), h(i + 1, j), s(u)), lp(h(i, j + 1), h(i + 1, j + 1), s(u)), s(v)) * 2 - 1;
+};
+const bgl = (l, f) => {
+  const key = q * 2 + l;
+  if (!BG[key]) {
+    const [c, x] = mk(256, 256), id = x.createImageData(256, 256), b = new Uint32Array(id.data.buffer), ac = AX[q].c,
+      k0 = u32(mix(ac, '#06040c', l ? .86 : .74)), k1 = u32(mix(ac, '#06040c', l ? .74 : .58)), f_ = (x, y) => vp(x / 32 + l * 3, y / 64, 8, 4) + vp(x / 8, y / 16 + l * 5, 32, 16) * .3 > (l ? .32 : .42);
+    for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) if (f_(x, y)) b[y * 256 + x] = f_(x - 1, y) && f_(x + 1, y) ? k0 : k1;
+    x.putImageData(id, 0, 0); BG[key] = X.createPattern(c, 'repeat');
+  }
+  X.save(); view(0, 0, f); X.fillStyle = BG[key]; X.fillRect(round(camx * f) - 400, round(camy * f) - 400, 800, 800); X.restore();
 };
 
 const reset = () => {
-  M.clear(); MT.clear(); CF.clear(); CC.clear(); E = []; P = []; gy = 0; pgx = 8; pgw = 4;
-  while (gy < 60) gen();
-  p = { x: CW * T / 2, y: 3 * T, vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, an: 0, nx: 0, ny: -1 };
-  th = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = -220; camx = p.x; camy = p.y; rec = 0; hb = 0;
-  DM = [...Array(46)].map(() => ({ x: p.x + rr(-260, 260), y: p.y + rr(-260, 260), ph: rnd() * 7, s: rr(.4, 1.2) }));
+  RM.clear(); CP = []; CO = []; EX = []; WP = []; E = []; P = []; gr = 0; pc = 2;
+  while (gr < 5) gen();
+  const R0 = room(2, 0);
+  p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
+  th = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
+  DM = [...Array(46)].map(() => ({ x: p.x + rr(-260, 260), y: p.y + rr(-260, 260), ph: rnd() * 7, s: rnd() < .3 ? 2 : 1 }));
 };
 const start = () => { reset(); st = 'play'; t = 0; ban = 2.2; S.n++; save(); sfx('go'); };
 
@@ -305,17 +318,17 @@ const phys = dt => {
   p.x += p.vx * dt; p.y += p.vy * dt;
   let nx = 0, ny = 0, hit = 0;
   for (let it = 0; it < 7; it++) {
-    if (fld(p.x, p.y) > .5) { p.x -= sx * 1.5; p.y -= sy * 1.5; continue; } // dentro de materia que acaba de solidificarse
+    if (sol(p.x, p.y)) { p.x -= sx * 1.5; p.y -= sy * 1.5; continue; } // dentro de materia que acaba de solidificarse
     let ax = 0, ay = 0, n = 0;
-    for (const [cx, cy] of SA) if (fld(p.x + cx * r, p.y + cy * r) > .5) { ax -= cx; ay -= cy; n++; }
+    for (const [cx, cy] of SA) if (sol(p.x + cx * r, p.y + cy * r)) { ax -= cx; ay -= cy; n++; }
     if (!n) break;
     const d = hypot(ax, ay); if (d < .01) break;
     ax /= d; ay /= d; p.x += ax * .55; p.y += ay * .55; nx += ax; ny += ay; hit = 1;
   }
   if (hit) {
     const d = hypot(nx, ny) || 1; nx /= d; ny /= d;
-    const vn = p.vx * nx + p.vy * ny;
-    if (vn < 0) { p.vx -= nx * vn * 1.08; p.vy -= ny * vn * 1.08; if (vn < -180) { sfx('ld'); p.sq = min(1, -vn / 450); } }
+    const vn_ = p.vx * nx + p.vy * ny;
+    if (vn_ < 0) { p.vx -= nx * vn_ * 1.08; p.vy -= ny * vn_ * 1.08; if (vn_ < -180) { sfx('ld'); p.sq = min(1, -vn_ / 450); } }
     if (-(nx * sx + ny * sy) > .45) { p.g = .1; p.nx = nx; p.ny = ny; p.vx *= 1 - 1.6 * dt; p.vy *= 1 - 1.6 * dt; }
   }
 };
@@ -327,6 +340,7 @@ const die = w => {
   if (score > S.b) { S.b = score; rec = 1; }
   S.d = max(S.d, depth); save();
 };
+const near = f => { const rx = floor(p.x / RW), ry = floor(p.y / RH); for (let j = ry - 1; j <= ry + 1; j++) for (let i = rx - 1; i <= rx + 1; i++) { const R = room(i, j); if (R && R.m) f(R); } };
 
 const upd = dt => {
   t += dt;
@@ -338,12 +352,9 @@ const upd = dt => {
   const ts = q == 3 ? .7 : 1, dts = dt * ts;
   for (let n = ceil(dts / .004), k = n; k--;) phys(dts / n);
   p.g -= dts; p.sq = max(0, p.sq - dt * 5);
-  // animación de la criatura (en espacio de pantalla)
   const c_ = cos(th), s_ = sin(th), svx = p.vx * c_ - p.vy * s_;
   if (abs(svx) > 18) p.f = svx > 0 ? 1 : -1;
   if (p.g > 0) p.ph += abs(svx) * dt * .16;
-  const ga_ = p.g > 0 ? cl(Math.atan2(p.nx * c_ - p.ny * s_, -(p.nx * s_ + p.ny * c_)), -.7, .7) : 0;
-  p.an = lp(p.an, ga_, min(1, dt * 12));
   if ((jb -= dt) > 0 && p.g > 0) {
     const js = q == 1 ? 375 : 255, gx = sin(th), gy = cos(th), vg = p.vx * gx + p.vy * gy;
     p.vx -= gx * (vg + js); p.vy -= gy * (vg + js); p.g = 0; jb = 0; sfx('jp');
@@ -351,145 +362,159 @@ const upd = dt => {
   }
   // la luz: se gasta siempre, más al girar y más cuanto más hondo
   L -= dt * (2.4 + abs(dth / dt) * 1.3) * (1 + depth / 450) * (q == 3 ? 1.4 : 1);
-  const pi = floor(p.x / T), pj = floor(p.y / T);
-  if (q == 2) for (let j = pj - 3; j <= pj + 3; j++) for (let i = pi - 3; i <= pi + 3; i++) if (tile(i, j) == 7 && i >= 0 && i < CW) {
-    L = min(100, L + 45 * dt); if (rnd() < dt * 20) pa(i * T + 6, j * T + 6, (p.x - i * T) * 2, (p.y - j * T) * 2, .4, '#ffd27a');
-    if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
-  }
+  near(R => {
+    for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 4 - p.x, y + ny * 4 - p.y) < p.r + 3) die('TE PINCHASTE');
+    if (q == 2) for (const [x, y] of R.lp) if (hypot(x - p.x, y + 6 - p.y) < 52) {
+      L = min(100, L + 45 * dt); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
+      if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
+    }
+  });
   for (const e of E) if (!e.k && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
     e.k = 1; cr++; L = min(100, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
-  // espinas
-  for (let j = pj - 1; j <= pj + 1; j++) for (let i = pi - 1; i <= pi + 1; i++)
-    if (tile(i, j) == 6 && i >= 0 && i < CW && hypot(cl(p.x, i * T + 2, i * T + T - 2) - p.x, cl(p.y, j * T + 5, j * T + T) - p.y) < p.r - 1) die('TE PINCHASTE');
+  const pj = floor(p.y / 12);
   if (pj > depth) { score += (pj - depth) * 2; depth = pj; }
   // la Sombra cae desde arriba y acelera
-  vY += min(120, 27 + depth * .075) * dt; vY = max(vY, p.y - 300);
+  vY += min(85, 20 + depth * .05) * dt; vY = max(vY, p.y - 320);
   if (p.y - p.r < vY) die('LA SOMBRA TE ALCANZO');
   if (L <= 0) { L = 0; die('TE QUEDASTE SIN LUZ'); }
   if (L < 25 && (hb -= dt) < 0) { hb = .7; sfx('hb'); }
   if (!rec && S.b > 50 && score > S.b) { rec = 1; ban = 0; sfx('go'); burst(p.x, p.y, '#ffd75e', 40, 130); }
-  while (gy < pj + 40) gen();
-  const kc = floor(p.y / CH);
-  for (const k of M.keys()) if (k < pj - 60) M.delete(k);
-  for (const k of MT.keys()) if (k < kc - 3) { MT.delete(k); CF.delete(k); for (let n = 0; n < 4; n++) CC.delete(k * 4 + n); }
+  const pr = floor(p.y / RH);
+  while (gr <= pr + 3) gen();
+  for (const [k, R] of RM) if (R.ry < pr - 3) RM.delete(k);
+  const top = (pr - 3) * RH; CP = CP.filter(c => c[9] > top); CO = CO.filter(c => c[4] > top); EX = EX.filter(e => e[1] > top - 60);
   camx = lp(camx, p.x, min(1, dt * 8)); camy = lp(camy, p.y, min(1, dt * 8));
   upP(dt); mus(dt);
 };
 
 // ---------- dibujo ----------
-const ws = (x, y) => { const dx = (x - camx) * Z, dy = (y - camy) * Z, c = cos(th), s = sin(th); return [W / 2 + dx * c - dy * s, H / 2 + dx * s + dy * c]; };
-const view = (ox, oy, f = 1) => { X.translate(W / 2 + ox, H / 2 + oy); X.rotate(th); X.scale(Z, Z); X.translate(-camx * f, -camy * f); };
-const VR = 300; // radio visible en px de mundo
-
-// capas lejanas: columnas, estalactitas y raíces en silueta, con paralaje
-const far = (f, col, sd) => {
-  X.save(); view(0, 0, f); X.fillStyle = col;
-  const g = 70, cx = floor(camx * f / g), cy = floor(camy * f / g);
-  for (let j = cy - 6; j <= cy + 6; j++) for (let i = cx - 6; i <= cx + 6; i++) {
-    const h = hs(i * 7 + sd, j), h2 = hs(j * 3 + sd, i);
-    if (h > .42) continue;
-    const x0 = i * g + h2 * g, y0 = j * g, w = 6 + h2 * 16, hh = 50 + h * 260, up = h2 < .5;
-    X.beginPath(); X.moveTo(x0 - w, y0);
-    for (let n = 0; n <= 10; n++) { const u = n / 10; X.lineTo(x0 - w * (1 - u) * (.7 + .3 * sin(u * 9 + h * 30)) + sin(u * 5 + h2 * 9) * 4, y0 + (up ? -1 : 1) * u * hh); }
-    for (let n = 10; n >= 0; n--) { const u = n / 10; X.lineTo(x0 + w * (1 - u) * (.7 + .3 * sin(u * 7 + h2 * 30)) + sin(u * 5 + h2 * 9) * 4, y0 + (up ? -1 : 1) * u * hh); }
-    X.fill();
+const ws = (x, y) => { const dx = x - camx, dy = y - camy, c = cos(th), s = sin(th); return [U / 2 + dx * c - dy * s, V / 2 + dx * s + dy * c]; };
+const view = (ox, oy, f = 1) => { X.translate(U / 2 + ox, V / 2 + oy); X.rotate(th); X.translate(-round(camx * f), -round(camy * f)); };
+const VR = 290; // radio visible en px de mundo
+// prepara por adelantado las imágenes de las salas cercanas (una por cuadro) para que girar no tironee
+const pre = () => {
+  const ry = floor(camy / RH);
+  for (const qq of [q, (q + 1) % 4, (q + 3) % 4, (q + 2) % 4]) for (let j = ry - 1; j <= ry + 2; j++) for (let i = 0; i < NC; i++) {
+    const R = room(i, j); if (R && !R.img[qq] && abs(R.ox + RW / 2 - camx) < RW * 2) { R.img[qq] = rend(R, qq); return; }
   }
-  X.restore();
 };
 
-const cre = (x, y, s, f, an, ph, air, cc, tt) => {
-  X.save(); X.translate(x, y); X.rotate(an); X.scale(s * f, s); X.translate(0, -2);
-  X.lineCap = X.lineJoin = 'round';
-  const E_ = (x_, y_, rx, ry) => { X.beginPath(); X.ellipse(x_, y_, rx, ry, 0, 0, 7); X.fill(); };
-  const run = !air && abs(ph) > 0, sw = sin(tt * 6), fl_ = air ? -2.5 : sin(tt * 2.3) * .6;
-  const leg = (hx_, hy_, a, w, c) => { X.strokeStyle = c; X.lineWidth = w; X.beginPath(); X.moveTo(hx_, hy_); const kx = hx_ + sin(a) * 2.8, ky = hy_ + cos(a) * 2.8; X.lineTo(kx, ky); X.lineTo(kx + sin(a * .4) * 2.4 + .4, ky + 2.4); X.stroke(); };
-  const la = k => air ? (k < 2 ? .9 : -.8) : run ? sin(ph + k * PI / 2 + (k > 1) * .6) * .75 : 0;
-  const ear = (bx, by, tx_, ty_, w, c) => { X.fillStyle = c; X.beginPath(); X.moveTo(bx - w, by); X.quadraticCurveTo(bx - w - 1, (by + ty_) / 2, tx_, ty_); X.quadraticCurveTo(bx + w + 1.5, (by + ty_) / 2 + 1, bx + w, by + .5); X.fill(); };
-  for (let pass = 0; pass < 2; pass++) {
-    const o = pass ? 0 : 1.1, dk = '#170b28', C1 = pass ? '#f7f4ff' : dk, C2 = pass ? '#c9c0ea' : dk;
-    X.fillStyle = C1;
-    // cola esponjosa
-    for (let k = 0; k <= 8; k++) { const u = k / 8; X.beginPath(); X.arc(-5.5 - u * 9, -.5 - u * u * 7 + sin(tt * 5 - u * 3) * u * (air ? 1 : 2), 2.6 - u * 1.3 + o, 0, 7); X.fill(); }
-    // patas del fondo, cuerpo, patas del frente
-    leg(-3.6, 2.6, la(0) + PI * 0, 1.7 + o * 1.6, C2); leg(3.4, 2.6, la(2), 1.7 + o * 1.6, C2);
-    X.fillStyle = C1; E_(0, 0, 6.6 + o, 4.5 + o);
-    leg(-2.6, 3, la(1), 1.8 + o * 1.6, C1); leg(4.4, 3, la(3), 1.8 + o * 1.6, C1);
-    // cabeza, hocico y orejas largas
-    X.fillStyle = C1; E_(6.4, -4, 4.7 + o, 4.3 + o); E_(10, -2.6, 2.5 + o, 1.8 + o);
-    ear(4.6, -7, -2.5 + fl_, -16.5, 1.6 + o, pass ? C2 : dk); ear(6.6, -7.4, .5 + fl_, -16, 1.7 + o, C1);
+// oscuridad tramada en 4 niveles (Bayer 4x4) con huecos de luz
+const DI = DX.createImageData(U, V), DB = new Uint32Array(DI.data.buffer), DV = new Float32Array(U * V), BY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const dark = (Ls, a0) => {
+  DV.fill(1);
+  for (const [cx, cy, r, s] of Ls) {
+    const x0 = max(0, floor(cx - r)), x1 = min(U, ceil(cx + r)), y0 = max(0, floor(cy - r)), y1 = min(V, ceil(cy + r));
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const d = sqrt((x - cx) ** 2 + (y - cy) ** 2); if (d < r) DV[y * U + x] -= (1 - d / r) * s; }
   }
-  // detalles
-  X.fillStyle = cc; ga(.85); ear(6.6, -7.6, 1 + fl_, -14.2, .7, cc); ga(1);
-  X.fillStyle = '#ddd5f6'; ga(.7); E_(0, 2, 5.4, 2.2); ga(1);
-  const bl = tt % 3.4 < .13;
-  X.fillStyle = '#160b26'; E_(7.8, -4.6, 1.55, bl ? .3 : 2);
-  if (!bl) { X.fillStyle = '#ffffff'; E_(8.3, -5.4, .6, .6); X.fillStyle = cc; ga(.6); E_(7.6, -3.6, .7, .45); ga(1); }
-  X.fillStyle = '#2a1838'; E_(12.3, -2.9, .75, .6);
-  X.fillStyle = '#ff9ac8'; ga(.65); E_(9, -2, 1.2, .7); ga(1);
-  X.fillStyle = cc; X.beginPath(); X.moveTo(3.8, -7.2); X.lineTo(4.6, -6); X.lineTo(3.8, -4.8); X.lineTo(3, -6); X.fill();
-  X.beginPath(); X.arc(-14.5, -7.5 + sin(tt * 5 - 3) * (air ? 1 : 2), 1.3, 0, 7); X.fill();
-  X.restore();
+  for (let y = 0, n = 0; y < V; y++) for (let x = 0; x < U; x++, n++) {
+    const l = min(3, max(0, floor(DV[n] * 3 + BY[(y & 3) * 4 + (x & 3)] / 16)));
+    DB[n] = (l * a0 * 85 | 0) << 24 | 0x080203;
+  }
+  DX.putImageData(DI, 0, 0); X.drawImage(DC, 0, 0);
+};
+
+// la criatura: se dibuja en vectores a escala pequeña y se cuantiza a una paleta corta con contorno de 1 px
+const [SPC, SPX] = mk(48, 40), SPI = SPX.createImageData(48, 40), SPB = new Uint32Array(SPI.data.buffer);
+const spr = (ph, air, cc, tt) => {
+  const x = SPX; x.clearRect(0, 0, 48, 40); x.save(); x.translate(26, 27); x.scale(1.2, 1.2); x.lineCap = x.lineJoin = 'round';
+  const E_ = (x_, y_, rx, ry) => { x.beginPath(); x.ellipse(x_, y_, rx, ry, 0, 0, 7); x.fill(); };
+  const run = !air && abs(ph) > 0, fl_ = air ? -2.5 : sin(tt * 2.3) * .6;
+  const leg = (hx_, hy_, a, c) => { x.strokeStyle = c; x.lineWidth = 1.9; x.beginPath(); x.moveTo(hx_, hy_); const kx = hx_ + sin(a) * 2.8, ky = hy_ + cos(a) * 2.8; x.lineTo(kx, ky); x.lineTo(kx + sin(a * .4) * 2.4 + .4, ky + 2.4); x.stroke(); };
+  const la = k => air ? (k < 2 ? .9 : -.8) : run ? sin(ph + k * PI / 2 + (k > 1) * .6) * .75 : 0;
+  const ear = (bx, by, tx_, ty_, w, c) => { x.fillStyle = c; x.beginPath(); x.moveTo(bx - w, by); x.quadraticCurveTo(bx - w - 1, (by + ty_) / 2, tx_, ty_); x.quadraticCurveTo(bx + w + 1.5, (by + ty_) / 2 + 1, bx + w, by + .5); x.fill(); };
+  const C1 = '#f7f4ff', C2 = '#b9aee0';
+  x.fillStyle = C1;
+  for (let k = 0; k <= 8; k++) { const u = k / 8; x.beginPath(); x.arc(-5.5 - u * 9, -.5 - u * u * 7 + sin(tt * 5 - u * 3) * u * (air ? 1 : 2), 2.6 - u * 1.3, 0, 7); x.fill(); }
+  leg(-3.6, 2.6, la(0), C2); leg(3.4, 2.6, la(2), C2);
+  x.fillStyle = C1; E_(0, 0, 6.6, 4.5);
+  leg(-2.6, 3, la(1), C1); leg(4.4, 3, la(3), C1);
+  E_(6.4, -4, 4.7, 4.3); E_(10, -2.6, 2.5, 1.8);
+  ear(4.6, -7, -2.5 + fl_, -16.5, 1.6, C2); ear(6.6, -7.4, .5 + fl_, -16, 1.7, C1); ear(6.6, -7.6, 1 + fl_, -14.2, .9, cc);
+  x.fillStyle = cc; x.beginPath(); x.arc(-14.5, -7.5 + sin(tt * 5 - 3) * (air ? 1 : 2), 1.5, 0, 7); x.fill();
+  x.restore();
+  const d = x.getImageData(0, 0, 48, 40).data, o = new Uint8Array(48 * 40), pal = [[247, 244, 255], [185, 174, 224], hx(cc)];
+  for (let n = 0; n < 48 * 40; n++) if (d[n * 4 + 3] > 110) {
+    let bi = 0, bd = 1e9;
+    pal.forEach((c, k) => { const e = (c[0] - d[n * 4]) ** 2 + (c[1] - d[n * 4 + 1]) ** 2 + (c[2] - d[n * 4 + 2]) ** 2; if (e < bd) { bd = e; bi = k; } });
+    o[n] = bi + 1;
+  }
+  const PC = [0, u32('#f7f4ff'), u32('#b9aee0'), u32(cc)], DK = u32('#170b28'), SH = u32('#d6cdf2');
+  for (let j = 0, n = 0; j < 40; j++) for (let i = 0; i < 48; i++, n++) {
+    const v = o[n], g = (a, b) => a >= 0 && b >= 0 && a < 48 && b < 40 ? o[b * 48 + a] : 0;
+    SPB[n] = v ? v == 1 && (!g(i, j + 2) || !g(i, j + 1)) ? SH : PC[v] : g(i - 1, j) || g(i + 1, j) || g(i, j - 1) || g(i, j + 1) ? DK : 0;
+  }
+  const px_ = (i, j, c) => SPB[j * 48 + i] = c, bl = tt % 3.4 < .13, ED = u32('#160b26');
+  if (bl) { px_(35, 22, ED); px_(36, 22, ED); }
+  else { for (let j = 20; j < 23; j++) { px_(35, j, ED); px_(36, j, ED); } px_(36, 20, u32('#ffffff')); px_(35, 22, u32(cc)); }
+  px_(41, 23, ED); px_(37, 25, u32('#ff9ac8')); px_(38, 25, u32('#ff9ac8'));
+  px_(30, 19, u32(cc)); px_(30, 20, u32(cc)); px_(31, 20, u32(cc)); px_(29, 20, u32(cc));
+  x.putImageData(SPI, 0, 0);
 };
 
 const draw = () => {
+  X = LX;
   const ax = AX[q], ox = round((rnd() - .5) * sh * 2), oy = round((rnd() - .5) * sh * 2);
-  X.setTransform(1, 0, 0, 1, 0, 0); X.imageSmoothingEnabled = true;
-  // niebla de color del axioma
-  const g = X.createRadialGradient(W / 2, H * .5, 0, W / 2, H * .5, W * .7);
-  g.addColorStop(0, mix(ax.c, '#07050f', .74)); g.addColorStop(.55, mix(ax.c, '#06040c', .88)); g.addColorStop(1, '#030208');
-  X.fillStyle = g; X.fillRect(0, 0, W, H);
-  far(.35, mix(ax.c, '#06040c', .8), 1); far(.6, mix(ax.c, '#05030a', .9), 2);
-  // polvo luminoso
+  X.setTransform(1, 0, 0, 1, 0, 0); X.imageSmoothingEnabled = false;
+  const g = X.createRadialGradient(U / 2, V / 2, 0, U / 2, V / 2, U * .7);
+  g.addColorStop(0, mix(ax.c, '#07050f', .72)); g.addColorStop(.55, mix(ax.c, '#06040c', .87)); g.addColorStop(1, '#030208');
+  X.fillStyle = g; X.fillRect(0, 0, U, V);
+  bgl(0, .35); bgl(1, .6);
   X.globalCompositeOperation = 'lighter';
-  for (const d of DM) { const [a, b] = ws(d.x, d.y); ga(.25 + .25 * sin(t * 2 + d.ph)); X.fillStyle = mix(ax.c, '#ffffff', .5); X.fillRect(a, b, d.s * 2, d.s * 2); }
+  for (const d of DM) { const [a, b] = ws(d.x, d.y); ga(.3 + .3 * sin(t * 2 + d.ph)); fr(round(a), round(b), d.s, d.s, mix(ax.c, '#ffffff', .5)); }
   ga(1); X.globalCompositeOperation = 'source-over';
   // escenario
   X.save(); view(ox, oy);
-  fr(-3000, -4000, 3000 - PX + 1, 9000 + camy * 2, '#030207'); fr(CW * T + PX - 1, -4000, 3000, 9000 + camy * 2); fr(-3000, -4000, 6000, 4000);
-  for (let k = max(0, floor((camy - VR) / CH)); k <= floor((camy + VR) / CH); k++) X.drawImage(chunk(k, q), -PX, k * CH - PAD, FW * C, CH + PAD * 2);
+  fr(-3000, camy - 3000, 3000, 6000, '#040309'); fr(WW, camy - 3000, 3000, 6000); fr(-3000, -3000, WW + 6000, 3000);
+  const lamps = [];
+  for (let j = max(0, floor((camy - VR) / RH)); j <= floor((camy + VR) / RH); j++) for (let i = max(0, floor((camx - VR) / RW)); i <= min(NC - 1, floor((camx + VR) / RW)); i++) {
+    const R = room(i, j); if (!R) continue;
+    X.drawImage(R.img[q] || (R.img[q] = rend(R, q)), R.ox - 1, R.oy - 1);
+    for (const [x, y] of R.lp) lamps.push(ws(x, y + 6));
+  }
   // semillas de luz
   for (const e of E) {
-    const b = 2 + sin(t * 5 + e.ph) * .6;
-    X.fillStyle = '#ffffff'; X.beginPath(); X.arc(e.x, e.y, b, 0, 7); X.fill();
-    X.strokeStyle = mix(ax.c, '#ffffff', .5); X.lineWidth = .7; X.beginPath(); const a = t * 2 + e.ph;
-    for (let n = 0; n < 4; n++) { const aa = a + n * PI / 2; X.moveTo(e.x + cos(aa) * 2.5, e.y + sin(aa) * 2.5); X.lineTo(e.x + cos(aa) * 6, e.y + sin(aa) * 6); } X.stroke();
+    const ex = round(e.x), ey = round(e.y), a = t * 3 + e.ph, rd = 4 + round(sin(t * 5 + e.ph));
+    fr(ex - 1, ey, 3, 1, '#ffffff'); fr(ex, ey - 1, 1, 3);
+    X.fillStyle = mix(ax.c, '#ffffff', .5);
+    for (let n = 0; n < 4; n++) { const aa = a + n * PI / 2; X.fillRect(round(ex + cos(aa) * rd), round(ey + sin(aa) * rd), 1, 1); }
   }
   // la Sombra: masa viva con tentáculos
-  X.fillStyle = '#000000'; X.beginPath(); X.moveTo(-400, vY - 3000);
-  for (let x = -400; x <= CW * T + 400; x += 5) X.lineTo(x, vY + sin(x * .09 + t * 4) * 4 + sin(x * .031 - t * 1.7) * 6 + max(0, sin(x * .23 + t)) ** 6 * 14);
-  X.lineTo(CW * T + 400, vY - 3000); X.fill();
-  X.strokeStyle = '#9a3aff'; X.lineWidth = 1.2; X.stroke();
-  for (const e of P) { ga(e.l / e.m); X.fillStyle = e.c; X.fillRect(e.x - .8, e.y - .8, 1.6, 1.6); } ga(1);
+  for (let x = floor((camx - 420) / 2) * 2; x < camx + 420; x += 2) {
+    const yy = round(vY + sin(x * .09 + t * 4) * 4 + sin(x * .031 - t * 1.7) * 6 + max(0, sin(x * .23 + t)) ** 6 * 14);
+    fr(x, yy - 1500, 2, 1500, '#000000'); fr(x, yy, 2, 1, '#9a3aff');
+  }
+  for (const e of P) { ga(e.l / e.m); fr(floor(e.x), floor(e.y), e.l > .4 ? 2 : 1, e.l > .4 ? 2 : 1, e.c); } ga(1);
   X.restore();
-  // luz de la criatura
-  const [px, py] = ws(p.x, p.y), ci = floor(camx / T), cj = floor(camy / T), lamps = [];
-  for (let j = cj - 25; j <= cj + 25; j++) for (const i of [0, CW - 1]) if (tile(i, j) == 7) lamps.push(ws(i * T + 6, j * T + 7));
-  DX.globalCompositeOperation = 'source-over'; DX.clearRect(0, 0, W, H);
-  DX.fillStyle = `rgba(3,2,8,${lp(.9, .5, L / 100)})`; DX.fillRect(0, 0, W, H);
-  DX.globalCompositeOperation = 'destination-out';
-  if (st != 'over') lt(DX, '#ffffff', px + ox, py + oy, (60 + L * 1.6) * Z);
-  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(DX, '#ffffff', a + ox, b + oy, 26 * Z, .5); }
-  if (q == 2) for (const [a, b] of lamps) lt(DX, '#ffffff', a + ox, b + oy, 70 * Z);
-  X.drawImage(DC, 0, 0);
+  // luz
+  const [px, py] = ws(p.x, p.y), Ls = [];
+  if (st != 'over') Ls.push([px + ox, py + oy, 60 + L * 1.6, 1.8]);
+  for (const e of E) { const [a, b] = ws(e.x, e.y); Ls.push([a + ox, b + oy, 26, .8]); }
+  if (q == 2) for (const [a, b] of lamps) Ls.push([a + ox, b + oy, 75, 1.8]);
+  dark(Ls, lp(.93, .55, L / 100));
   X.globalCompositeOperation = 'lighter';
-  if (st != 'over') { lt(X, '#fff0d0', px + ox, py + oy, (18 + L * .1) * Z, .5); lt(X, ax.c, px + ox, py + oy, 40 * Z, .14); }
-  if (q == 2) for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 30 * Z, .8);
-  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(X, '#bfe6ff', a + ox, b + oy, 12 * Z, .6); }
+  if (st != 'over') { lt(X, '#fff0d0', px + ox, py + oy, 18 + L * .1, .45); lt(X, ax.c, px + ox, py + oy, 40, .14); }
+  if (q == 2) for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 30, .8);
+  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(X, '#bfe6ff', a + ox, b + oy, 12, .6); }
   X.globalCompositeOperation = 'source-over';
-  if (st == 'play') cre(px + ox, py + oy, Z, p.f, p.an, p.ph, p.g <= 0, ax.c, t);
-  if (fl > 0) { ga(fl * .35); fr(0, 0, W, H, ax.c); ga(1); }
-  // interfaz (en una rejilla de 480x270, a escala 2)
-  X.setTransform(2, 0, 0, 2, 0, 0);
-  const U = W / 2, V = H / 2;
+  if (st == 'play') { spr(p.ph, p.g <= 0, ax.c, t); X.save(); X.translate(round(px + ox), round(py + oy)); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
+  if (fl > 0) { ga(fl * .35); fr(0, 0, U, V, ax.c); ga(1); }
   if (st == 'title') {
-    ga(.5); fr(0, 0, U, V, '#05040b'); ga(1);
+    ga(.55); fr(0, 0, U, V, '#05040b'); ga(1);
+    X.globalCompositeOperation = 'lighter'; lt(X, ax.c, U / 2, 145, 60, .35); X.globalCompositeOperation = 'source-over';
+    spr(t * 9, 0, ax.c, t); X.save(); X.translate(U / 2, 157); X.scale(3, 3); X.drawImage(SPC, -26, -30); X.restore();
+  }
+  if (st == 'over') { ga(min(.7, ot * 2)); fr(0, 0, U, V, '#05040b'); ga(1); }
+  // a pantalla: cada píxel del mundo es un bloque de 2x2, sin suavizado
+  O.setTransform(1, 0, 0, 1, 0, 0); O.imageSmoothingEnabled = false; O.drawImage(LC, 0, 0, W, H);
+  // interfaz nítida (en una rejilla de 480x270, a escala 2)
+  X = O; X.setTransform(2, 0, 0, 2, 0, 0);
+  if (st == 'title') {
     const lw = tx('AXIOMI', -999, 0, '#000', 9);
     let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y, c, 9); x += 6.4 * .95 * 9; });
     txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', U / 2, 96, '#e8e4ff', 2, 1);
-    X.setTransform(1, 0, 0, 1, 0, 0); X.globalCompositeOperation = 'lighter'; lt(X, ax.c, W / 2, 290, 120, .35); X.globalCompositeOperation = 'source-over';
-    cre(W / 2, 314, 5, 1, 0, t * 9, 0, ax.c, t); X.setTransform(2, 0, 0, 2, 0, 0);
     AX.forEach((a, k) => { tx(a.n, 90 + k * 100, 176, a.c, 1, 1); });
     txs('<  >  GIRAR       ESPACIO  SALTAR', U / 2, 196, '#b8b0e0', 1, 1);
     txs('SOLO LO DEL COLOR DEL AXIOMA ES SOLIDO', U / 2, 208, '#8a84b8', 1, 1);
@@ -513,9 +538,8 @@ const draw = () => {
   X.strokeStyle = '#ffffff'; X.lineWidth = 1; X.beginPath(); X.moveTo(cx, cy - 7); X.lineTo(cx, cy - 2); X.stroke(); X.beginPath(); X.arc(cx, cy, 1.2, 0, 7); X.fillStyle = '#ffffff'; X.fill();
   txs(ax.n, U - 46, V - 29, ax.c, 1, 2);
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
-  if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA CORRER. BAJA.', U / 2, V - 20, '#e8e4ff', 1, 1);
+  if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA CORRER POR LOS TUNELES.', U / 2, V - 20, '#e8e4ff', 1, 1);
   if (st == 'over') {
-    ga(min(.7, ot * 2)); fr(0, 0, U, V, '#05040b'); ga(1);
     txs('APAGADO', U / 2, 50, '#ff6080', 4, 1);
     txs(why, U / 2, 86, '#e8e4ff', 1, 1);
     txs(depth + 'M', U / 2, 106, '#ffffff', 4, 1);
@@ -548,10 +572,10 @@ const loop = ts => {
   if (st == 'play') upd(dt);
   else {
     t += dt; ot += dt; upP(dt); mus(dt);
-    if (st == 'title') { th = sin(t * .45) * 2.4; q = pq = ((round(th / (PI / 2)) % 4) + 4) % 4; camy = lp(camy, 60 + t * 9 % 450, .05); camx = CW * T / 2; }
+    if (st == 'title') { th = sin(t * .45) * 2.4; q = pq = ((round(th / (PI / 2)) % 4) + 4) % 4; camx = p.x + sin(t * .2) * 40; camy = p.y + 30 + sin(t * .3) * 30; }
   }
   sh = max(0, sh - dt * 12); fl = max(0, fl - dt * 2.5); ban -= dt;
-  draw();
+  pre(); draw();
 };
 reset();
 requestAnimationFrame(loop);

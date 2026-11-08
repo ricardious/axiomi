@@ -1,6 +1,6 @@
 # AXIOMI
 
-Arcade experimental de siluetas y neón: **giras el mundo** para mover a una pequeña criatura de luz por un pozo oscuro sin fondo. Al girar no solo cambia la gravedad: cada orientación es un **axioma** con sus propias reglas, colores y música.
+Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Al girar no solo cambia la gravedad: cada orientación es un **axioma** con sus propias reglas, colores y música.
 
 **Jugar:** https://ricardious.github.io/axiomi/
 
@@ -27,16 +27,18 @@ El truco: inclinar el mundo justo más allá de 45° hace desaparecer un suelo d
 
 ## Cómo se juega
 
-- **Desciende** lo más hondo que puedas. Cada sala tiene una salida: un hueco, un tapón de color o un puente que solo existe en un axioma.
+- **Desciende** lo más hondo que puedas. El camino baja por pozos y corre por túneles hacia los lados: inclina el mundo para que la gravedad te lleve por ellos.
+- **Tapones e islas de color** cierran el paso: atraviésalos en un axioma en el que sean fantasma.
+- **Cuevas laterales** sin salida guardan semillas y lámparas.
 - **La Sombra** cae desde arriba y acelera con la profundidad.
 - **Tu luz** se gasta sin parar, más al girar. Recógela en los cristales o en las lámparas (solo en BRASA).
 - **Púas** rojas: tocarlas te apaga.
 
 ## Reglas del reto
 
-- **≤ 32 KB:** el juego completo es un único `index.html` (~14 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
+- **≤ 32 KB:** el juego completo es un único `index.html` (~15 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
 - **Código propio:** JavaScript puro con Canvas 2D y Web Audio. Sin librerías, frameworks ni motores.
-- **Cero assets:** los escenarios orgánicos, la criatura, la iluminación, la tipografía vectorial, los efectos y la música generativa se crean con código.
+- **Cero assets:** el pixel art (cuevas, criatura, flora), la luz tramada, la tipografía vectorial, los efectos y la música generativa se crean con código.
 
 ## Desarrollo
 
