@@ -128,31 +128,35 @@ const mus = dt => {
 // materia: 0 aire · 1 roca · 2..5 materia del axioma 0..3
 let st = 'title', t = 0, th = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
   vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
-let RM = new Map(), CP = [], CO = [], EX = [], WP = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0;
+let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0;
+// biomas: cada 5 filas de salas el pozo cambia de escenario
+const BN = ['GRUTAS', 'BOSQUE HONGO', 'GEODA', 'ABISMO'], BI = ry => ry < 5 ? 0 : (1 + floor((ry - 5) / 5)) % 4;
 const room = (i, j) => i < 0 || i >= NC ? 0 : RM.get(j * 8 + i);
 const vn = (x, y) => { const i = floor(x), j = floor(y), u = x - i, v = y - j, s = k => k * k * (3 - 2 * k); return lp(lp(hs(i, j), hs(i + 1, j), s(u)), lp(hs(i, j + 1), hs(i + 1, j + 1), s(u)), s(v)) * 2 - 1; };
 
 // cápsula de radio variable entre dos puntos (con su caja para filtrar rápido)
-const cap = (a, b, ra, rb) => CP.push([a[0], a[1], ra, b[0], b[1], rb, min(a[0] - ra, b[0] - rb), min(a[1] - ra, b[1] - rb), max(a[0] + ra, b[0] + rb), max(a[1] + ra, b[1] + rb)]);
+const cap = (a, b, ra, rb, oc) => CP.push([a[0], a[1], ra, b[0], b[1], rb, min(a[0] - ra, b[0] - rb), min(a[1] - ra, b[1] - rb), max(a[0] + ra, b[0] + rb), max(a[1] + ra, b[1] + rb), oc]);
+// rellenos sólidos (hongos gigantes, cristales, islas): [caja, tipo (0 cápsula · 1 elipse), materia, parámetros]
+const fil = (m, ty, a, bb) => FL.push([...bb, ty, m, ...a]);
 // conecta cada salida con el centro de la sala mediante un túnel curvo
 // tr: además deja un rastro de chispas por el centro del túnel que marca el camino
-const carve = (R, ex, rc, tr) => {
+const carve = (R, ex, rc, tr, oc) => {
   const c = R.c;
   for (const [x, y, r] of ex) {
     const dx = c[0] - x, dy = c[1] - y, l = hypot(dx, dy) || 1, j = rr(-.3, .3) * l, m = [x + dx / 2 - dy / l * j, y + dy / 2 + dx / l * j], rm = (r + rc) / 2;
-    cap([x, y], m, r, rm); cap(m, c, rm, rc); R.sd.push(m); EX.push([x, y]);
+    cap([x, y], m, r, rm, oc); cap(m, c, rm, rc, oc); R.sd.push(m); EX.push([x, y]);
     if (tr) for (const [a, b_] of [[[x, y], m], [m, c]]) for (let k = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; k < n; k++) E.push({ x: lp(a[0], b_[0], k / n), y: lp(a[1], b_[1], k / n), ph: k, s: 1 });
   }
 };
 const gen = () => {
-  const ry = gr++, oy = ry * RH, d = min(1, ry / 45), Rs = [];
+  const ry = gr++, oy = ry * RH, d = min(1, ry / 45), Rs = [], bi = BI(ry), big = bi & 1; // bosque y abismo son abiertos
   for (let i = 0; i < NC; i++) {
-    const R = { rx: i, ry, ox: i * RW, oy, k: 0, sd: [], img: [], ux: -1e3, c: [i * RW + RW / 2 + rr(-60, 60), oy + RH / 2 + rr(-38, 38)] };
+    const R = { rx: i, ry, bi, ox: i * RW, oy, k: 0, sd: [], img: [], ux: -1e3, c: [i * RW + RW / 2 + rr(-60, 60), oy + RH / 2 + rr(-38, 38)] };
     Rs.push(R); RM.set(ry * 8 + i, R);
   }
   const c = pc, c2 = ry && rnd() < .8 ? cl(c + pk([-3, -2, -1, -1, 1, 1, 2, 3]), 0, NC - 1) : c, lo = min(c, c2), hi = max(c, c2), hb_ = [];
-  for (let i = lo; i < hi; i++) hb_[i] = [(i + 1) * RW, oy + rr(52, RH - 52), rr(19, 27)];
-  const dx = c2 * RW + rr(60, RW - 60), dr = rr(18, 25);
+  for (let i = lo; i < hi; i++) hb_[i] = [(i + 1) * RW, oy + rr(big ? 62 : 52, RH - (big ? 62 : 52)), big ? rr(34, 42) : rr(19, 27)];
+  const dx = c2 * RW + rr(60, RW - 60), dr = bi == 3 ? rr(28, 34) : rr(18, 25);
   if (!ry) Rs[c].c = [c * RW + RW / 2, 76];
   for (let i = lo; i <= hi; i++) {
     const R = Rs[i], ex = []; R.k = 1; R.lamp = rnd() < .3;
@@ -160,7 +164,27 @@ const gen = () => {
     if (i == c2) ex.push([dx, oy + RH, dr]);
     if (i > lo) ex.push(hb_[i - 1]);
     if (i < hi) ex.push(hb_[i]);
-    carve(R, ex, ry ? rr(24, 46) : 48, ry);
+    if (big && ry) R.c = [R.ox + RW / 2 + rr(-30, 30), oy + RH / 2 + rr(-10, 10)];
+    const rc = !ry ? 48 : bi == 1 ? rr(56, 66) : bi == 3 ? rr(70, 78) : rr(24, 46), vx = e => e[1] == oy || e[1] == oy + RH;
+    carve(R, ex, rc, ry, bi == 2);
+    if (bi == 1) for (let n = ri(2, 4); n--;) { // hongos gigantes: tallo y sombrero, sirven de plataforma
+      const x = R.ox + rr(36, RW - 36), cy = R.c[1] + rr(-15, 35), rx = rr(20, 36), r_ = rr(7, 11), tx = x + rr(-10, 10);
+      if (ex.some(e => vx(e) ? abs(e[0] - x) < e[2] + rx + 12 : hypot(e[0] - tx, e[1] - cy) < e[2] + rx + 10)) continue;
+      fil(6, 0, [x, oy + RH - 2, 6, tx, cy, 4], [min(x, tx) - 8, cy - 8, max(x, tx) + 8, oy + RH]);
+      fil(6, 1, [tx, cy, rx, r_, 1], [tx - rx - 3, cy - r_ - 3, tx + rx + 3, cy + r_ + 3]);
+    }
+    if (bi == 2) for (let n = ri(4, 7); n--;) { // cristales que brotan de las paredes de la geoda
+      const a = rnd() * 7;
+      if (ex.some(e => abs((Math.atan2(e[1] - R.c[1], e[0] - R.c[0]) - a + 3 * PI) % (2 * PI) - PI) < .55)) continue;
+      const l1 = rc + 14, l2 = rc - rr(6, 18), s1 = [R.c[0] + cos(a) * l1, R.c[1] + sin(a) * l1], s2 = [R.c[0] + cos(a) * l2, R.c[1] + sin(a) * l2];
+      fil(6, 0, [...s1, 6, ...s2, 1], [min(s1[0], s2[0]) - 7, min(s1[1], s2[1]) - 7, max(s1[0], s2[0]) + 7, max(s1[1], s2[1]) + 7]);
+    }
+    if (bi == 3) for (let n = ri(2, 4); n--;) { // islas flotantes en el vacío
+      const rx = rr(16, 34), r_ = rr(7, 12), x = R.ox + rr(rx + 10, RW - rx - 10), y = oy + rr(30, RH - 30);
+      if (ex.some(e => vx(e) && abs(e[0] - x) < e[2] + rx + 12)) continue;
+      fil(rnd() < .3 ? ri(2, 5) : 1, 1, [x, y, rx, r_, 0], [x - rx - 6, y - r_ - 6, x + rx + 6, y + r_ + 6]);
+      E.push({ x, y: y - r_ - 10, ph: rnd() * 6 });
+    }
     for (const m of [...R.sd, R.c]) if (ry && rnd() < .3) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
     // islas de materia de color dentro de las cámaras
     if (ry > 1 && rnd() < .35 + d * .4) { const a = rnd() * 7, rb = rr(9, 17), x = R.c[0] + cos(a) * rr(8, 36), y = R.c[1] + sin(a) * rr(8, 26); CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
@@ -181,28 +205,40 @@ const gen = () => {
   pc = c2; pdx = dx; pdr = dr;
 };
 
+// distancia con signo a una cápsula de radio variable (oc: octogonal, para las facetas de la geoda)
+const cd = (x, y, ax, ay, ra, bx, by, rb, oc) => {
+  const ex = bx - ax, ey = by - ay, u = cl(((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey || 1), 0, 1), qx = abs(x - ax - ex * u), qy = abs(y - ay - ey * u);
+  return (oc ? max(qx, qy, (qx + qy) * .7071) : hypot(qx, qy)) - lp(ra, rb, u);
+};
 // rejilla de materia de una sala, más sus púas y lámparas
 const mapR = R => {
-  const { ox, oy } = R, m = R.m = new Uint8Array(RW * RH);
+  const { ox, oy } = R, m = R.m = new Uint8Array(RW * RH).fill(1);
   const cs = CP.filter(c => c[8] > ox - 20 && c[6] < ox + RW + 20 && c[9] > oy - 20 && c[7] < oy + RH + 20),
-    co = CO.filter(c => c[3] > ox && c[1] < ox + RW && c[4] > oy && c[2] < oy + RH);
-  R.sp = []; R.lp = [];
-  R.so = 1;
-  if (!cs.length) { m.fill(1); return m; }
-  for (let j = 0; j < RH; j++) for (let i = 0; i < RW; i++) {
-    const x = ox + i, y = oy + j, n = vn(x * .035, y * .035) * 6.5 + vn(x * .12 + 9, y * .12) * 2;
-    let dm = 1e9;
-    for (const [ax, ay, ra, bx, by, rb] of cs) {
-      const ex = bx - ax, ey = by - ay, u = cl(((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey || 1), 0, 1), dd = hypot(x - ax - ex * u, y - ay - ey * u) - lp(ra, rb, u);
-      if (dd < dm) dm = dd;
+    co = CO.filter(c => c[3] > ox && c[1] < ox + RW && c[4] > oy && c[2] < oy + RH), fs = FL.filter(f => f[2] > ox && f[0] < ox + RW && f[3] > oy && f[1] < oy + RH), na = R.bi == 2 ? .3 : 1;
+  R.sp = []; R.lp = []; R.so = 1;
+  if (!cs.length) return m;
+  // ruido en una rejilla de 4 px, interpolado (mucho más barato que evaluarlo en cada píxel)
+  const GW = RW / 4 + 1, NZ = new Float32Array(GW * (RH / 4 + 1));
+  for (let j = 0; j <= RH / 4; j++) for (let i = 0; i < GW; i++) { const x = ox + i * 4, y = oy + j * 4; NZ[j * GW + i] = (vn(x * .035, y * .035) * 6.5 + vn(x * .12 + 9, y * .12) * 2) * na; }
+  // por bloques de 8x8: sólo se prueban las cápsulas que pueden tocar el bloque; sin ninguna, es roca
+  for (let by = 0; by < RH; by += 8) for (let bx = 0; bx < RW; bx += 8) {
+    const x0 = ox + bx, y0 = oy + by, bc = cs.filter(c => c[8] > x0 - 10 && c[6] < x0 + 18 && c[9] > y0 - 10 && c[7] < y0 + 18);
+    if (!bc.length) continue;
+    const bf = fs.filter(f => f[2] > x0 && f[0] < x0 + 8 && f[3] > y0 && f[1] < y0 + 8), bo = co.filter(c => c[3] > x0 && c[1] < x0 + 8 && c[4] > y0 && c[2] < y0 + 8);
+    for (let j = by; j < by + 8; j++) for (let i = bx; i < bx + 8; i++) {
+      const x = ox + i, y = oy + j, g = (j >> 2) * GW + (i >> 2), u = (i & 3) / 4, n = lp(lp(NZ[g], NZ[g + 1], u), lp(NZ[g + GW], NZ[g + GW + 1], u), (j & 3) / 4);
+      let dm = 1e9;
+      for (let k = 0; k < bc.length && dm + n >= 0; k++) { const c = bc[k], dd = cd(x, y, c[0], c[1], c[2], c[3], c[4], c[5], c[10]); if (dd < dm) dm = dd; }
+      if (dm + n >= 0) continue;
+      let v = 0;
+      for (const [, , , , ty, mm, a, b, c, d, e, f] of bf) if (ty ? ((x - a) / c) ** 2 + ((y - b) / d) ** 2 + n * .03 < 1 && (!e || y < b + d * .35) : cd(x, y, a, b, c, d, e, f) < 0) { v = mm; break; }
+      if (!v) for (const [k, a, b, c, d, cx, cy, r] of bo) if (x >= a && x < c && y >= b && y < d && (!r || hypot(x - cx, y - cy) - r + n * .5 < 0)) v = k + 2;
+      m[j * RW + i] = v; if (v != 1) R.so = 0;
     }
-    let v = dm + n < 0 ? 0 : 1;
-    if (!v) for (const [k, a, b, c, d, cx, cy, r] of co) if (x >= a && x < c && y >= b && y < d && (!r || hypot(x - cx, y - cy) - r + n * .5 < 0)) v = k + 2;
-    m[j * RW + i] = v; if (v != 1) R.so = 0;
   }
   const mt = (x, y) => { x = floor(x) - ox; y = floor(y) - oy; return x < 0 || y < 0 || x >= RW || y >= RH ? 1 : m[y * RW + x]; };
   // púas: grupos sobre suelos, techos y paredes, nunca junto a una salida
-  const ns = R.k == 1 && R.ry > 1 ? ri(1, 2 + min(3, R.ry / 10)) : 0;
+  const ns = R.k == 1 && R.ry > 1 ? ri(0, 1 + min(3, R.ry / 9)) : 0;
   for (let n = 0; n < ns; n++) {
     const s = pk([...R.sd, R.c]), [nx, ny] = pk([[0, -1], [0, -1], [0, 1], [1, 0], [-1, 0]]), len = ri(3, 8);
     let bx = floor(s[0]), by = floor(s[1]), f = 0;
@@ -223,20 +259,37 @@ const mat = (x, y) => {
   const R = room(floor(x / RW), floor(y / RH));
   return R ? (R.m || mapR(R))[(y - R.oy) * RW + x - R.ox] : 1;
 };
-const sol = (x, y) => { const v = mat(x, y); return v == 1 || v == q + 2; };
+const sol = (x, y) => { const v = mat(x, y); return v == 1 || v == 6 || v == q + 2; };
 
 // ---------- pixel art de cada sala (una imagen por axioma) ----------
 const PD = 5, MG_ = 6; // cada imagen invade 5 px de sus vecinas (sin costuras al girar); se analizan 6 px más
+const PW = RW + (PD + MG_) * 2, PH = RH + (PD + MG_) * 2, CSs = new Uint8Array(PW * PH), DDs = new Uint8Array(PW * PH);
+// materia de la sala con un margen de las vecinas, copiada fila a fila (se guarda: es igual para los 4 axiomas)
+const pad = R => {
+  if (R.pv) return R.pv;
+  const v = R.pv = new Uint8Array(PW * PH), x0 = R.ox - PD - MG_, y0 = R.oy - PD - MG_;
+  for (let j = 0; j < PH; j++) {
+    const yy = y0 + j, rj = floor(yy / RH), ly = (yy - rj * RH) * RW;
+    let lr = -9, mm = 0;
+    for (let i = 0; i < PW; i++) {
+      const xx = x0 + i, ri_ = floor(xx / RW);
+      if (ri_ != lr) { lr = ri_; const Q = room(ri_, rj); mm = Q ? Q.m || mapR(Q) : 0; }
+      v[j * PW + i] = mm ? mm[ly + xx - ri_ * RW] : 1;
+    }
+  }
+  return v;
+};
 const rend = (R, qq) => {
   const w = RW + PD * 2, h = RH + PD * 2, [cn, x] = mk(w, h), id = x.createImageData(w, h), b = new Uint32Array(id.data.buffer);
-  const ac = AX[qq].c, ox = R.ox - PD, oy = R.oy - PD, pw = w + MG_ * 2, ph_ = h + MG_ * 2, cs = new Uint8Array(pw * ph_), mv = new Uint8Array(pw * ph_), dd = new Uint8Array(pw * ph_);
-  // clases: 0 aire · 1 roca · 2 materia sólida · 3 materia fantasma
-  for (let j = 0, n = 0; j < ph_; j++) for (let i = 0; i < pw; i++, n++) { const v = mat(ox + i - MG_, oy + j - MG_), c = v < 2 ? v : v == qq + 2 ? 2 : 3; mv[n] = v; cs[n] = c; dd[n] = c == 0 || c == 3 ? 0 : 9; }
+  const ac = AX[qq].c, ox = R.ox - PD, oy = R.oy - PD, pw = w + MG_ * 2, ph_ = h + MG_ * 2, mv = pad(R), cs = CSs, dd = DDs;
+  // clases: 0 aire · 1 roca · 2 materia sólida · 3 materia fantasma · 4 hongo/cristal
+  for (let n = 0; n < pw * ph_; n++) { const v = mv[n], c = v == 6 ? 4 : v < 2 ? v : v == qq + 2 ? 2 : 3; cs[n] = c; dd[n] = c == 0 || c == 3 ? 0 : 9; }
   // distancia de cada píxel de roca al hueco más cercano (dos pasadas): borde de luz y degradado
   for (let j = 1; j < ph_; j++) for (let i = 1; i < pw; i++) { const n = j * pw + i; dd[n] = min(dd[n], dd[n - 1] + 1, dd[n - pw] + 1); }
   for (let j = ph_ - 2; j >= 0; j--) for (let i = pw - 2; i >= 0; i--) { const n = j * pw + i; dd[n] = min(dd[n], dd[n + 1] + 1, dd[n + pw] + 1); }
   const C = (i, j) => cs[(j + MG_) * pw + i + MG_];
-  const K = [mix(ac, '#ffffff', .35), mix(ac, '#040309', .35), mix(ac, '#040309', .72), '#040309', '#0c0a17', mix(ac, '#040309', .55)].map(c => u32(c));
+  const B = R.bi, K = [mix(ac, '#ffffff', .35), mix(ac, '#040309', .35), mix(ac, '#040309', .72), ['#040309', '#09040e', '#03060d', '#020207'][B], ['#0c0a17', '#1a0c24', '#0d1a2e', '#0a0a14'][B], mix(ac, '#040309', .55), mix(ac, '#ffffff', .6)].map(c => u32(c));
+  const CRY = [mix(ac, '#ffffff', .8), mix(ac, '#ffffff', .15), mix(ac, '#ffffff', .45), mix(ac, '#05040b', .3), mix(ac, '#ffffff', .3)].map(c => u32(c)), MU = ['#f0d8ff', '#9a6cc0', '#7a4f9e', mix(ac, '#ffffff', .4)].map(c => u32(c));
   const MC = AX.map(a => [mix(a.c, '#05040b', .5), mix(a.c, '#05040b', .3), mix(a.c, '#ffffff', .6), a.c].map(c => u32(c))), GH = AX.map(a => [u32(a.c, 210), u32(a.c, 70)]);
   const set = (i, j, c) => { if (i >= 0 && j >= 0 && i < w && j < h) b[j * w + i] = c; };
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
@@ -245,11 +298,12 @@ const rend = (R, qq) => {
     const x_ = ox + i, y_ = oy + j, n = j * w + i;
     if (c == 1) {
       const e = dd[N], up = cs[N - pw];
-      b[n] = up == 0 || up == 3 ? K[0] : e == 1 ? K[1] : e == 2 ? K[2] : e < 5 && (x_ + y_) & 1 ? K[2] : hs(x_ >> 1, y_ >> 1) < .045 ? K[4] : K[3];
+      b[n] = up == 0 || up == 3 ? K[0] : e == 1 ? K[1] : e == 2 ? K[2] : e < 5 && (x_ + y_) & 1 ? K[2] : hs(x_ >> 1, y_ >> 1) < (B == 2 ? .1 : .045) ? K[4] : K[3];
       if (!up && C(i - 1, j) && C(i + 1, j) && !C(i - 1, j - 1) && !C(i + 1, j - 1)) { // hierba, hongos
         const g = hs(x_, y_ * 3), g2 = hs(y_, x_);
-        if (g < .45) { const hh = 1 + (g2 * 5 | 0); for (let k = 1; k <= hh; k++) if (!C(i, j - k)) set(i, j - k, k == hh && g < .08 ? K[0] : K[3]); }
-        else if (g < .47 && !C(i, j - 7)) {
+        if (B == 2) { if (g < .3) for (let k = 1; k <= 1 + (g2 * 3 | 0); k++) if (!C(i, j - k)) set(i, j - k, K[6]); } // brotes de cristal
+        else if (g < (B == 1 ? .55 : .45)) { const hh = 1 + (g2 * (B == 1 ? 8 : 5) | 0); for (let k = 1; k <= hh; k++) if (!C(i, j - k)) set(i, j - k, k == hh && g < .08 ? K[0] : K[3]); }
+        else if (g < (B == 1 ? .6 : .47) && !C(i, j - 7)) {
           const hh = 2 + (g2 * 3 | 0);
           for (let k = 1; k <= hh; k++) set(i, j - k, K[3]);
           for (let k = -2; k <= 2; k++) set(i + k, j - hh - 1, K[3]);
@@ -257,12 +311,16 @@ const rend = (R, qq) => {
           set(i - 1, j - hh - 1, MC[qq][3]); set(i + 1, j - hh - 2, MC[qq][3]);
         }
       }
-      if (!C(i, j + 1) && !C(i - 1, j + 1) && !C(i + 1, j + 1) && hs(x_ * 3, y_) < .16) { // raíces colgantes
-        const ln = 2 + (hs(y_, x_ * 7) * 16 | 0);
+      if (!C(i, j + 1) && !C(i - 1, j + 1) && !C(i + 1, j + 1) && hs(x_ * 3, y_) < [.16, .3, .1, .12][B]) { // raíces colgantes (o estalactitas de cristal)
+        const ln = 2 + (hs(y_, x_ * 7) * [16, 26, 4, 40][B] | 0);
         let k = 1;
-        for (; k <= ln; k++) { const xo = round(sin(k * .45 + x_) * 1.2); if (C(i + xo, j + k)) break; set(i + xo, j + k, K[3]); }
-        if (k > ln && hs(x_, y_ * 5) < .2) { set(i, j + k, K[0]); set(i + 1, j + k, K[0]); set(i, j + k + 1, K[5]); set(i + 1, j + k + 1, K[5]); }
+        for (; k <= ln; k++) { const xo = B == 2 ? 0 : round(sin(k * .45 + x_) * 1.2); if (C(i + xo, j + k)) break; set(i + xo, j + k, B == 2 ? K[6] : K[3]); }
+        if (B != 2 && k > ln && hs(x_, y_ * 5) < (B == 1 ? .5 : .2)) { set(i, j + k, K[0]); set(i + 1, j + k, K[0]); set(i, j + k + 1, K[5]); set(i + 1, j + k + 1, K[5]); }
       }
+    } else if (c == 4) {
+      // hongo gigante (carne lila con manchas que brillan) o cristal facetado
+      const e1 = cs[N - 1] != 4 || cs[N + 1] != 4 || cs[N - pw] != 4 || cs[N + pw] != 4;
+      b[n] = B == 2 ? e1 ? CRY[0] : CRY[1 + ((((x_ + y_) >> 2) + ((x_ - y_) >> 3)) & 3)] : e1 ? MU[0] : hs(x_ >> 1, y_ >> 1) < .1 ? MU[3] : x_ % 4 ? MU[1] : MU[2];
     } else {
       // materia de color: sólida con borde brillante y rayas; fantasma con borde a trazos
       const v = mv[N] - 2, df = k => cs[k] != c, e1 = df(N - 1) || df(N + 1) || df(N - pw) || df(N + pw), e2 = df(N - 2) || df(N + 2) || df(N - pw * 2) || df(N + pw * 2);
@@ -287,17 +345,26 @@ const rend = (R, qq) => {
   x.putImageData(id, 0, 0); return cn;
 };
 
+// roca maciza (salas sin huecos): textura repetida con el mismo tono y motas que la roca pintada
+const RK = {}, rock = B => RK[B] || (RK[B] = (() => {
+  const [c, x] = mk(64, 64), id = x.createImageData(64, 64), b = new Uint32Array(id.data.buffer), k = [['#040309', '#09040e', '#03060d', '#020207'][B], ['#0c0a17', '#1a0c24', '#0d1a2e', '#0a0a14'][B]].map(c => u32(c));
+  for (let n = 0; n < 4096; n++) b[n] = k[+(hs((n & 63) >> 1, n >> 7) < (B == 2 ? .1 : .045))];
+  x.putImageData(id, 0, 0); return LX.createPattern(c, 'repeat');
+})());
 // fondo: dos capas de columnas en silueta que se repiten, con paralaje
 const BG = {};
 const vp = (x, y, px, py) => {
   const i = floor(x), j = floor(y), u = x - i, v = y - j, s = k => k * k * (3 - 2 * k), h = (a, b) => hs((a % px + px) % px + 77, (b % py + py) % py);
   return lp(lp(h(i, j), h(i + 1, j), s(u)), lp(h(i, j + 1), h(i + 1, j + 1), s(u)), s(v)) * 2 - 1;
 };
-const bgl = (l, f) => {
-  const key = q * 2 + l;
+const bgl = (l, f, B) => {
+  const key = q * 8 + B * 2 + l;
   if (!BG[key]) {
     const [c, x] = mk(256, 256), id = x.createImageData(256, 256), b = new Uint32Array(id.data.buffer), ac = AX[q].c,
-      k0 = u32(mix(ac, '#06040c', l ? .86 : .74)), k1 = u32(mix(ac, '#06040c', l ? .74 : .58)), f_ = (x, y) => vp(x / 32 + l * 3, y / 64, 8, 4) + vp(x / 8, y / 16 + l * 5, 32, 16) * .3 > (l ? .32 : .42);
+      k0 = u32(mix(ac, '#06040c', l ? .86 : .74)), k1 = u32(mix(ac, '#06040c', l ? .74 : .58)), f_ = B == 1 ? (x, y) => vp(x / 32 + l * 3, y / 32, 8, 8) + vp(x / 8, y / 8 + l * 5, 32, 32) * .3 > (l ? .3 : .4) // copas redondas
+        : B == 2 ? (x, y) => { const u = (x + y) & 255, v = (x - y) & 255, i = u >> 6, j = v >> 6; return hs(j + l * 3, i + 40) < .45 && max(abs((u & 63) - 32), abs((v & 63) - 32)) < 8 + hs(i + l * 7, j) * 22; } // rombos
+        : B == 3 ? (x, y) => vp(x / 64 + l * 2, y / 32, 4, 8) + vp(x / 16, y / 8 + l * 5, 16, 32) * .25 > (l ? .38 : .5) // islas lejanas
+        : (x, y) => vp(x / 32 + l * 3, y / 64, 8, 4) + vp(x / 8, y / 16 + l * 5, 32, 16) * .3 > (l ? .32 : .42); // columnas
     for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) if (f_(x, y)) b[y * 256 + x] = f_(x - 1, y) && f_(x + 1, y) ? k0 : k1;
     x.putImageData(id, 0, 0); BG[key] = X.createPattern(c, 'repeat');
   }
@@ -305,12 +372,12 @@ const bgl = (l, f) => {
 };
 
 const reset = () => {
-  RM.clear(); CP = []; CO = []; EX = []; WP = []; E = []; P = []; gr = 0; pc = 2; wi = 0;
+  RM.clear(); CP = []; CO = []; EX = []; WP = []; FL = []; E = []; P = []; gr = 0; pc = 2; wi = 0;
   while (gr < 5) gen();
   const R0 = room(2, 0);
   p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
   th = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
-  DM = [...Array(46)].map(() => ({ x: p.x + rr(-260, 260), y: p.y + rr(-260, 260), ph: rnd() * 7, s: rnd() < .3 ? 2 : 1 }));
+  pbi = bn = 0; DM = [...Array(46)].map(() => ({ x: rr(0, U), y: rr(0, V), ph: rnd() * 7, s: rnd() < .3 ? 2 : 1 }));
 };
 const start = () => { reset(); st = 'play'; t = 0; ban = 2.2; S.n++; save(); sfx('go'); };
 
@@ -395,9 +462,10 @@ const upd = dt => {
   if (L < 25 && (hb -= dt) < 0) { hb = .7; sfx('hb'); }
   if (!rec && S.b > 50 && score > S.b) { rec = 1; ban = 0; sfx('go'); burst(p.x, p.y, '#ffd75e', 40, 130); }
   const pr = floor(p.y / RH);
+  if (BI(max(0, pr)) != pbi) { pbi = BI(max(0, pr)); bn = 2.6; sfx('go'); }
   while (gr <= pr + 3) gen();
   for (const [k, R] of RM) if (R.ry < pr - 3) RM.delete(k);
-  const top = (pr - 3) * RH; CP = CP.filter(c => c[9] > top); CO = CO.filter(c => c[4] > top); EX = EX.filter(e => e[1] > top - 60);
+  const top = (pr - 3) * RH; CP = CP.filter(c => c[9] > top); CO = CO.filter(c => c[4] > top); FL = FL.filter(f => f[3] > top); EX = EX.filter(e => e[1] > top - 60);
   camx = lp(camx, p.x, min(1, dt * 8)); camy = lp(camy, p.y, min(1, dt * 8));
   upP(dt); mus(dt);
 };
@@ -408,7 +476,7 @@ const view = (ox, oy, f = 1) => { X.translate(U / 2 + ox, V / 2 + oy); X.rotate(
 const VR = 290; // radio visible en px de mundo
 // prepara por adelantado la materia y las imágenes de las salas cercanas, con un presupuesto de 4 ms por cuadro
 const pre = () => {
-  const t1 = performance.now(), ry = floor(camy / RH), late = () => performance.now() - t1 > 4;
+  const t1 = performance.now(), ry = floor(camy / RH), late = () => performance.now() - t1 > 3;
   for (let j = ry - 1; j <= ry + 3; j++) for (let i = 0; i < NC; i++) { const R = room(i, j); if (R && !R.m) { mapR(R); if (late()) return; } }
   for (const qq of [q, (q + 1) % 4, (q + 3) % 4, (q + 2) % 4]) for (let j = ry - 1; j <= ry + 2; j++) for (let i = 0; i < NC; i++) {
     const R = room(i, j); if (R && R.m && !R.so && !R.img[qq]) { R.img[qq] = rend(R, qq); if (late()) return; }
@@ -476,9 +544,12 @@ const draw = () => {
   const g = X.createRadialGradient(U / 2, V / 2, 0, U / 2, V / 2, U * .7);
   g.addColorStop(0, mix(ax.c, '#07050f', .72)); g.addColorStop(.55, mix(ax.c, '#06040c', .87)); g.addColorStop(1, '#030208');
   X.fillStyle = g; X.fillRect(0, 0, U, V);
-  bgl(0, .35); bgl(1, .6);
+  const B = BI(max(0, floor(camy / RH))); bgl(0, .35, B); bgl(1, .6, B);
   X.globalCompositeOperation = 'lighter';
-  for (const d of DM) { const [a, b] = ws(d.x, d.y); ga(.3 + .3 * sin(t * 2 + d.ph)); fr(round(a), round(b), d.s, d.s, mix(ax.c, '#ffffff', .5)); }
+  for (const d of DM) { // esporas que suben, destellos, corrientes de caída...
+    const a = ((d.x - camx * .7) % U + U) % U, b = ((d.y - camy * .7 - t * [2, 9, 2, 60][B] * d.s) % V + V) % V;
+    ga(B == 2 ? max(0, sin(t * 3 + d.ph)) : .3 + .3 * sin(t * 2 + d.ph)); fr(round(a), round(b), d.s, B == 3 ? d.s * 4 : d.s, B == 1 ? '#e0b8ff' : mix(ax.c, '#ffffff', .5));
+  }
   ga(1); X.globalCompositeOperation = 'source-over';
   // escenario
   X.save(); view(ox, oy);
@@ -487,7 +558,7 @@ const draw = () => {
   for (let j = max(0, floor((camy - VR) / RH)); j <= floor((camy + VR) / RH); j++) for (let i = max(0, floor((camx - VR) / RW)); i <= min(NC - 1, floor((camx + VR) / RW)); i++) {
     const R = room(i, j); if (!R) continue;
     if (!R.m) mapR(R);
-    VS.push(R); if (R.so) fr(R.ox, R.oy, RW, RH, '#040309');
+    VS.push(R); if (R.so) { X.fillStyle = rock(R.bi); X.fillRect(R.ox, R.oy, RW, RH); }
   }
   for (const R of VS) {
     if (!R.so) X.drawImage(R.img[q] || (R.img[q] = rend(R, q)), R.ox - PD, R.oy - PD);
@@ -559,7 +630,7 @@ const draw = () => {
   X.lineCap = 'round'; X.lineWidth = 3; X.strokeStyle = '#ffffff22'; X.beginPath(); X.moveTo(12, 13); X.lineTo(108, 13); X.stroke();
   X.save(); X.shadowColor = lc; X.shadowBlur = 10; X.strokeStyle = lc; X.beginPath(); X.moveTo(12, 13); X.lineTo(12 + 96 * L / 100, 13); X.stroke(); X.restore();
   txs('LUZ', 116, 10, lc);
-  txs(depth + 'M', U - 10, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 10, 33, '#9ad8ff', 1, 2);
+  txs(depth + 'M', U - 10, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 10, 33, '#9ad8ff', 1, 2); txs(BN[pbi], U - 10, 45, '#8a84b8', 1, 2);
   // brújula de axiomas
   const cx = U - 26, cy = V - 26;
   X.lineWidth = .8; X.strokeStyle = '#ffffff30'; X.beginPath(); X.arc(cx, cy, 13, 0, 7); X.stroke();
@@ -569,6 +640,7 @@ const draw = () => {
   }
   X.strokeStyle = '#ffffff'; X.lineWidth = 1; X.beginPath(); X.moveTo(cx, cy - 7); X.lineTo(cx, cy - 2); X.stroke(); X.beginPath(); X.arc(cx, cy, 1.2, 0, 7); X.fillStyle = '#ffffff'; X.fill();
   txs(ax.n, U - 46, V - 29, ax.c, 1, 2);
+  if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); ga(1); }
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
   if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA CORRER POR LOS TUNELES.', U / 2, V - 20, '#e8e4ff', 1, 1);
   if (st == 'over') {
@@ -606,7 +678,7 @@ const loop = ts => {
     t += dt; ot += dt; upP(dt); mus(dt);
     if (st == 'title') { th = sin(t * .45) * 2.4; q = pq = ((round(th / (PI / 2)) % 4) + 4) % 4; camx = p.x + sin(t * .2) * 40; camy = p.y + 30 + sin(t * .3) * 30; }
   }
-  sh = max(0, sh - dt * 12); fl = max(0, fl - dt * 2.5); ban -= dt;
+  sh = max(0, sh - dt * 12); fl = max(0, fl - dt * 2.5); ban -= dt; bn -= dt;
   pre(); draw();
 };
 reset();

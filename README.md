@@ -25,8 +25,20 @@ El ángulo del mundo decide qué axioma está activo. **Solo los bloques del col
 
 El truco: inclinar el mundo justo más allá de 45° hace desaparecer un suelo de color mientras la gravedad todavía apunta hacia abajo.
 
+## Biomas
+
+Cada ~70 m el pozo cambia de escenario:
+
+| Bioma | Cómo es |
+|---|---|
+| **GRUTAS** | túneles y cámaras de roca con hierba y raíces |
+| **BOSQUE HONGO** | cavernas abiertas con hongos gigantes que sirven de plataforma, esporas y lianas |
+| **GEODA** | cámaras de paredes facetadas con cristales que brotan de los muros |
+| **ABISMO** | un vacío enorme con islas flotantes (algunas de color) por el que caes |
+
 ## Cómo se juega
 
+- **Sigue las chispas y la flecha**: marcan el camino.
 - **Desciende** lo más hondo que puedas. El camino baja por pozos y corre por túneles hacia los lados: inclina el mundo para que la gravedad te lleve por ellos.
 - **Tapones e islas de color** cierran el paso: atraviésalos en un axioma en el que sean fantasma.
 - **Cuevas laterales** sin salida guardan semillas y lámparas.
