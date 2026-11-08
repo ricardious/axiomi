@@ -7,7 +7,7 @@ const { floor, min, max, abs, sin, cos, hypot, PI, random: rnd, round, sqrt, cei
 const cl = (v, a, b) => v < a ? a : v > b ? b : v, lp = (a, b, k) => a + (b - a) * k;
 const rr = (a, b) => a + rnd() * (b - a), ri = (a, b) => floor(rr(a, b + 1)), pk = a => a[floor(rnd() * a.length)];
 const hs = (i, j) => { let h = Math.imul(i | 0, 374761393) + Math.imul(j | 0, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
-const mk = (w, h) => { const c = D.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; };
+const mk = (w, h, f) => { const c = D.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently: !!f }); x.imageSmoothingEnabled = false; return [c, x]; };
 const cv = D.getElementById('c'), O = cv.getContext('2d');
 cv.width = W; cv.height = H;
 const [LC, LX] = mk(U, V), [DC, DX] = mk(U, V);
@@ -99,6 +99,7 @@ const sfx = (k, gap = .06) => {
   if (!A || (sfxT[k] || 0) > A.currentTime - gap) return; sfxT[k] = A.currentTime;
   ({
     sw: () => { [0, 7, 12, 16].forEach((s, i) => tn(nt(q, s) * 2, .45, 'triangle', .06, 0, i * .03, 1)); nz(.25, .07, 2500); },
+    sp: () => tn(1760 + cr % 6 * 120, .07, 'sine', .035, 0, 0, 1),
     cr: () => { tn(1320 + cr % 5 * 110, .15, 'triangle', .07, 0, 0, 1); tn(1980, .25, 'sine', .04, 0, .06, 1); },
     jp: () => tn(260, .14, 'square', .03, q == 1 ? 900 : 620),
     ld: () => nz(.06, .08, 700),
@@ -127,18 +128,20 @@ const mus = dt => {
 // materia: 0 aire · 1 roca · 2..5 materia del axioma 0..3
 let st = 'title', t = 0, th = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
   vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
-let RM = new Map(), CP = [], CO = [], EX = [], WP = [], gr = 0, pc = 2, pdx = 0, pdr = 0;
+let RM = new Map(), CP = [], CO = [], EX = [], WP = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0;
 const room = (i, j) => i < 0 || i >= NC ? 0 : RM.get(j * 8 + i);
 const vn = (x, y) => { const i = floor(x), j = floor(y), u = x - i, v = y - j, s = k => k * k * (3 - 2 * k); return lp(lp(hs(i, j), hs(i + 1, j), s(u)), lp(hs(i, j + 1), hs(i + 1, j + 1), s(u)), s(v)) * 2 - 1; };
 
 // cápsula de radio variable entre dos puntos (con su caja para filtrar rápido)
 const cap = (a, b, ra, rb) => CP.push([a[0], a[1], ra, b[0], b[1], rb, min(a[0] - ra, b[0] - rb), min(a[1] - ra, b[1] - rb), max(a[0] + ra, b[0] + rb), max(a[1] + ra, b[1] + rb)]);
 // conecta cada salida con el centro de la sala mediante un túnel curvo
-const carve = (R, ex, rc) => {
+// tr: además deja un rastro de chispas por el centro del túnel que marca el camino
+const carve = (R, ex, rc, tr) => {
   const c = R.c;
   for (const [x, y, r] of ex) {
     const dx = c[0] - x, dy = c[1] - y, l = hypot(dx, dy) || 1, j = rr(-.3, .3) * l, m = [x + dx / 2 - dy / l * j, y + dy / 2 + dx / l * j], rm = (r + rc) / 2;
     cap([x, y], m, r, rm); cap(m, c, rm, rc); R.sd.push(m); EX.push([x, y]);
+    if (tr) for (const [a, b_] of [[[x, y], m], [m, c]]) for (let k = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; k < n; k++) E.push({ x: lp(a[0], b_[0], k / n), y: lp(a[1], b_[1], k / n), ph: k, s: 1 });
   }
 };
 const gen = () => {
@@ -157,22 +160,22 @@ const gen = () => {
     if (i == c2) ex.push([dx, oy + RH, dr]);
     if (i > lo) ex.push(hb_[i - 1]);
     if (i < hi) ex.push(hb_[i]);
-    carve(R, ex, ry ? rr(24, 46) : 48);
-    for (const m of [...R.sd, R.c]) if (ry && rnd() < .55) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
+    carve(R, ex, ry ? rr(24, 46) : 48, ry);
+    for (const m of [...R.sd, R.c]) if (ry && rnd() < .3) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
     // islas de materia de color dentro de las cámaras
-    if (ry > 1 && rnd() < .25 + d * .45) { const a = rnd() * 7, rb = rr(9, 17), x = R.c[0] + cos(a) * rr(8, 36), y = R.c[1] + sin(a) * rr(8, 26); CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
+    if (ry > 1 && rnd() < .35 + d * .4) { const a = rnd() * 7, rb = rr(9, 17), x = R.c[0] + cos(a) * rr(8, 36), y = R.c[1] + sin(a) * rr(8, 26); CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
   }
   // camino de puntos (lo usa el bot de pruebas)
   for (let i = c, s = c2 > c ? 1 : -1; ; i += s) { WP.push(Rs[i].c); if (i == c2) break; WP.push(hb_[s > 0 ? i : i - 1]); }
   WP.push([dx, oy + RH]);
   // cuevas laterales sin salida, con semillas y a veces una lámpara
-  if (ry) for (const i of [lo - 1, hi + 1]) if (i >= 0 && i < NC && rnd() < .45) {
+  if (ry) for (const i of [lo - 1, hi + 1]) if (i >= 0 && i < NC && rnd() < .2) {
     const R = Rs[i], b = [i < lo ? lo * RW : i * RW, oy + rr(52, RH - 52), rr(17, 22)];
     R.k = 2; R.lamp = rnd() < .65; carve(R, [b], rr(22, 34)); carve(Rs[i < lo ? lo : hi], [b], 22);
     for (let n = 3; n--;) E.push({ x: R.c[0] + rr(-12, 12), y: R.c[1] + rr(-10, 10), ph: rnd() * 6 });
   }
   // tapones de color en las salidas: sólo los atraviesas en un axioma en el que sean fantasma
-  const pl = ry > 2 ? .22 + d * .45 : 0;
+  const pl = ry > 1 ? .35 + d * .4 : 0;
   for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i]; CO.push([ri(0, 3), x - 5, y - r - 18, x + 5, y + r + 18]); }
   if (ry > 1 && rnd() < pl) CO.push([ri(0, 3), dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]);
   pc = c2; pdx = dx; pdr = dr;
@@ -184,6 +187,7 @@ const mapR = R => {
   const cs = CP.filter(c => c[8] > ox - 20 && c[6] < ox + RW + 20 && c[9] > oy - 20 && c[7] < oy + RH + 20),
     co = CO.filter(c => c[3] > ox && c[1] < ox + RW && c[4] > oy && c[2] < oy + RH);
   R.sp = []; R.lp = [];
+  R.so = 1;
   if (!cs.length) { m.fill(1); return m; }
   for (let j = 0; j < RH; j++) for (let i = 0; i < RW; i++) {
     const x = ox + i, y = oy + j, n = vn(x * .035, y * .035) * 6.5 + vn(x * .12 + 9, y * .12) * 2;
@@ -194,11 +198,11 @@ const mapR = R => {
     }
     let v = dm + n < 0 ? 0 : 1;
     if (!v) for (const [k, a, b, c, d, cx, cy, r] of co) if (x >= a && x < c && y >= b && y < d && (!r || hypot(x - cx, y - cy) - r + n * .5 < 0)) v = k + 2;
-    m[j * RW + i] = v;
+    m[j * RW + i] = v; if (v != 1) R.so = 0;
   }
   const mt = (x, y) => { x = floor(x) - ox; y = floor(y) - oy; return x < 0 || y < 0 || x >= RW || y >= RH ? 1 : m[y * RW + x]; };
   // púas: grupos sobre suelos, techos y paredes, nunca junto a una salida
-  const ns = R.k && R.ry > 1 ? ri(0, 1 + min(3, R.ry / 12)) : 0;
+  const ns = R.k == 1 && R.ry > 1 ? ri(1, 2 + min(3, R.ry / 10)) : 0;
   for (let n = 0; n < ns; n++) {
     const s = pk([...R.sd, R.c]), [nx, ny] = pk([[0, -1], [0, -1], [0, 1], [1, 0], [-1, 0]]), len = ri(3, 8);
     let bx = floor(s[0]), by = floor(s[1]), f = 0;
@@ -222,25 +226,27 @@ const mat = (x, y) => {
 const sol = (x, y) => { const v = mat(x, y); return v == 1 || v == q + 2; };
 
 // ---------- pixel art de cada sala (una imagen por axioma) ----------
+const PD = 5, MG_ = 6; // cada imagen invade 5 px de sus vecinas (sin costuras al girar); se analizan 6 px más
 const rend = (R, qq) => {
-  const w = RW + 2, h = RH + 2, [cn, x] = mk(w, h), id = x.createImageData(w, h), b = new Uint32Array(id.data.buffer);
-  const ac = AX[qq].c, ox = R.ox - 1, oy = R.oy - 1, pw = w + 6, cs = new Uint8Array(pw * (h + 6)), mv = new Uint8Array(pw * (h + 6));
-  if (!R.m) mapR(R);
-  for (let j = 0; j < h + 6; j++) for (let i = 0; i < pw; i++) { const v = mat(ox + i - 3, oy + j - 3), n = j * pw + i; mv[n] = v; cs[n] = v < 2 ? v : v == qq + 2 ? 2 : 3; }
+  const w = RW + PD * 2, h = RH + PD * 2, [cn, x] = mk(w, h), id = x.createImageData(w, h), b = new Uint32Array(id.data.buffer);
+  const ac = AX[qq].c, ox = R.ox - PD, oy = R.oy - PD, pw = w + MG_ * 2, ph_ = h + MG_ * 2, cs = new Uint8Array(pw * ph_), mv = new Uint8Array(pw * ph_), dd = new Uint8Array(pw * ph_);
   // clases: 0 aire · 1 roca · 2 materia sólida · 3 materia fantasma
-  const C = (i, j) => cs[(j + 3) * pw + i + 3], open = c => c == 0 || c == 3;
+  for (let j = 0, n = 0; j < ph_; j++) for (let i = 0; i < pw; i++, n++) { const v = mat(ox + i - MG_, oy + j - MG_), c = v < 2 ? v : v == qq + 2 ? 2 : 3; mv[n] = v; cs[n] = c; dd[n] = c == 0 || c == 3 ? 0 : 9; }
+  // distancia de cada píxel de roca al hueco más cercano (dos pasadas): borde de luz y degradado
+  for (let j = 1; j < ph_; j++) for (let i = 1; i < pw; i++) { const n = j * pw + i; dd[n] = min(dd[n], dd[n - 1] + 1, dd[n - pw] + 1); }
+  for (let j = ph_ - 2; j >= 0; j--) for (let i = pw - 2; i >= 0; i--) { const n = j * pw + i; dd[n] = min(dd[n], dd[n + 1] + 1, dd[n + pw] + 1); }
+  const C = (i, j) => cs[(j + MG_) * pw + i + MG_];
   const K = [mix(ac, '#ffffff', .35), mix(ac, '#040309', .35), mix(ac, '#040309', .72), '#040309', '#0c0a17', mix(ac, '#040309', .55)].map(c => u32(c));
-  const MC = AX.map(a => [mix(a.c, '#05040b', .62), mix(a.c, '#05040b', .48), mix(a.c, '#ffffff', .45), a.c].map(c => u32(c))), GH = AX.map(a => [u32(a.c, 170), u32(a.c, 55)]);
+  const MC = AX.map(a => [mix(a.c, '#05040b', .5), mix(a.c, '#05040b', .3), mix(a.c, '#ffffff', .6), a.c].map(c => u32(c))), GH = AX.map(a => [u32(a.c, 210), u32(a.c, 70)]);
   const set = (i, j, c) => { if (i >= 0 && j >= 0 && i < w && j < h) b[j * w + i] = c; };
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    const c = C(i, j), x_ = ox + i, y_ = oy + j;
+    const N = (j + MG_) * pw + i + MG_, c = cs[N];
     if (!c) continue;
-    const v = mv[(j + 3) * pw + i + 3] - 2, df = (a, b_) => { const e = C(a, b_); return c == 1 ? open(e) : e != c; },
-      e1 = df(i - 1, j) || df(i + 1, j) || df(i, j - 1) || df(i, j + 1), e2 = df(i - 2, j) || df(i + 2, j) || df(i, j - 2) || df(i, j + 2), n = j * w + i;
+    const x_ = ox + i, y_ = oy + j, n = j * w + i;
     if (c == 1) {
-      const e4 = df(i - 3, j) || df(i + 3, j) || df(i, j - 3) || df(i, j + 3) || df(i - 4, j) || df(i + 4, j) || df(i, j - 4) || df(i, j + 4);
-      b[n] = open(C(i, j - 1)) ? K[0] : e1 ? K[1] : e2 ? K[2] : e4 && (x_ + y_) & 1 ? K[2] : hs(x_ >> 1, y_ >> 1) < .045 ? K[4] : K[3];
-      if (!C(i, j - 1) && C(i - 1, j) && C(i + 1, j) && !C(i - 1, j - 1) && !C(i + 1, j - 1)) { // hierba, hongos
+      const e = dd[N], up = cs[N - pw];
+      b[n] = up == 0 || up == 3 ? K[0] : e == 1 ? K[1] : e == 2 ? K[2] : e < 5 && (x_ + y_) & 1 ? K[2] : hs(x_ >> 1, y_ >> 1) < .045 ? K[4] : K[3];
+      if (!up && C(i - 1, j) && C(i + 1, j) && !C(i - 1, j - 1) && !C(i + 1, j - 1)) { // hierba, hongos
         const g = hs(x_, y_ * 3), g2 = hs(y_, x_);
         if (g < .45) { const hh = 1 + (g2 * 5 | 0); for (let k = 1; k <= hh; k++) if (!C(i, j - k)) set(i, j - k, k == hh && g < .08 ? K[0] : K[3]); }
         else if (g < .47 && !C(i, j - 7)) {
@@ -257,14 +263,18 @@ const rend = (R, qq) => {
         for (; k <= ln; k++) { const xo = round(sin(k * .45 + x_) * 1.2); if (C(i + xo, j + k)) break; set(i + xo, j + k, K[3]); }
         if (k > ln && hs(x_, y_ * 5) < .2) { set(i, j + k, K[0]); set(i + 1, j + k, K[0]); set(i, j + k + 1, K[5]); set(i + 1, j + k + 1, K[5]); }
       }
-    } else if (c == 2) b[n] = e1 ? MC[v][2] : e2 ? MC[v][3] : ((x_ + y_) >> 2) % 3 ? MC[v][0] : MC[v][1];
-    else b[n] = e1 ? (x_ + y_) & 1 ? GH[v][0] : 0 : x_ % 4 == 0 && y_ % 4 == 0 ? GH[v][1] : 0;
+    } else {
+      // materia de color: sólida con borde brillante y rayas; fantasma con borde a trazos
+      const v = mv[N] - 2, df = k => cs[k] != c, e1 = df(N - 1) || df(N + 1) || df(N - pw) || df(N + pw), e2 = df(N - 2) || df(N + 2) || df(N - pw * 2) || df(N + pw * 2);
+      if (c == 2) b[n] = e1 ? MC[v][2] : e2 ? MC[v][3] : ((x_ + y_) >> 2) % 3 ? MC[v][0] : MC[v][1];
+      else b[n] = e1 ? (x_ + y_) >> 1 & 1 ? GH[v][0] : 0 : (x_ - y_ & 7) == 0 ? GH[v][1] : 0;
+    }
   }
-  // púas
-  const SPK = [u32('#040309'), u32('#7a1028'), u32('#ff2e55'), u32('#ffb0c0')];
-  for (const [sx, sy, nx, ny] of R.sp) for (let s = 0; s < 9; s++) {
-    const hw = [3, 3, 2, 2, 1, 1, 1, 0, 0][s];
-    for (let k = -hw; k <= hw; k++) set(sx + nx * s - ny * k - ox, sy + ny * s + nx * k - oy, SPK[s < 3 ? 0 : s < 5 ? 1 : s < 8 ? 2 : 3]);
+  // púas: rojas, grandes y con punta blanca
+  const SPK = [u32('#2a0410'), u32('#c0163c'), u32('#ff2e55'), u32('#ff8aa2'), u32('#ffffff')];
+  for (const [sx, sy, nx, ny] of R.sp) for (let s = 0; s < 10; s++) {
+    const hw = [3, 3, 3, 2, 2, 2, 1, 1, 0, 0][s];
+    for (let k = -hw; k <= hw; k++) set(sx + nx * s - ny * k - ox, sy + ny * s + nx * k - oy, SPK[s < 1 ? 0 : abs(k) == hw && hw ? 1 : s < 6 ? 2 : s < 9 ? 3 : 4]);
   }
   // lámparas: sólo se encienden en BRASA
   const on = qq == 2, LC_ = [u32('#040309'), u32(on ? '#ffe6a8' : '#4a3418'), u32('#ffffff')];
@@ -295,7 +305,7 @@ const bgl = (l, f) => {
 };
 
 const reset = () => {
-  RM.clear(); CP = []; CO = []; EX = []; WP = []; E = []; P = []; gr = 0; pc = 2;
+  RM.clear(); CP = []; CO = []; EX = []; WP = []; E = []; P = []; gr = 0; pc = 2; wi = 0;
   while (gr < 5) gen();
   const R0 = room(2, 0);
   p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
@@ -363,16 +373,19 @@ const upd = dt => {
   // la luz: se gasta siempre, más al girar y más cuanto más hondo
   L -= dt * (2.4 + abs(dth / dt) * 1.3) * (1 + depth / 450) * (q == 3 ? 1.4 : 1);
   near(R => {
-    for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 4 - p.x, y + ny * 4 - p.y) < p.r + 3) die('TE PINCHASTE');
+    for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) die('TE PINCHASTE');
     if (q == 2) for (const [x, y] of R.lp) if (hypot(x - p.x, y + 6 - p.y) < 52) {
       L = min(100, L + 45 * dt); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
   });
-  for (const e of E) if (!e.k && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
+  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + 2.5); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
+  for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
     e.k = 1; cr++; L = min(100, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
+  // siguiente punto del camino (para la flecha guía)
+  while (wi < WP.length - 1 && (hypot(WP[wi][0] - p.x, WP[wi][1] - p.y) < 45 || WP[wi][1] < p.y - 50)) wi++;
   const pj = floor(p.y / 12);
   if (pj > depth) { score += (pj - depth) * 2; depth = pj; }
   // la Sombra cae desde arriba y acelera
@@ -393,31 +406,33 @@ const upd = dt => {
 const ws = (x, y) => { const dx = x - camx, dy = y - camy, c = cos(th), s = sin(th); return [U / 2 + dx * c - dy * s, V / 2 + dx * s + dy * c]; };
 const view = (ox, oy, f = 1) => { X.translate(U / 2 + ox, V / 2 + oy); X.rotate(th); X.translate(-round(camx * f), -round(camy * f)); };
 const VR = 290; // radio visible en px de mundo
-// prepara por adelantado las imágenes de las salas cercanas (una por cuadro) para que girar no tironee
+// prepara por adelantado la materia y las imágenes de las salas cercanas, con un presupuesto de 4 ms por cuadro
 const pre = () => {
-  const ry = floor(camy / RH);
+  const t1 = performance.now(), ry = floor(camy / RH), late = () => performance.now() - t1 > 4;
+  for (let j = ry - 1; j <= ry + 3; j++) for (let i = 0; i < NC; i++) { const R = room(i, j); if (R && !R.m) { mapR(R); if (late()) return; } }
   for (const qq of [q, (q + 1) % 4, (q + 3) % 4, (q + 2) % 4]) for (let j = ry - 1; j <= ry + 2; j++) for (let i = 0; i < NC; i++) {
-    const R = room(i, j); if (R && !R.img[qq] && abs(R.ox + RW / 2 - camx) < RW * 2) { R.img[qq] = rend(R, qq); return; }
+    const R = room(i, j); if (R && R.m && !R.so && !R.img[qq]) { R.img[qq] = rend(R, qq); if (late()) return; }
   }
 };
 
 // oscuridad tramada en 4 niveles (Bayer 4x4) con huecos de luz
-const DI = DX.createImageData(U, V), DB = new Uint32Array(DI.data.buffer), DV = new Float32Array(U * V), BY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const DI = DX.createImageData(U, V), DB = new Uint32Array(DI.data.buffer), HU = U / 2, DV = new Float32Array(HU * V / 2), BY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 const dark = (Ls, a0) => {
   DV.fill(1);
-  for (const [cx, cy, r, s] of Ls) {
-    const x0 = max(0, floor(cx - r)), x1 = min(U, ceil(cx + r)), y0 = max(0, floor(cy - r)), y1 = min(V, ceil(cy + r));
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const d = sqrt((x - cx) ** 2 + (y - cy) ** 2); if (d < r) DV[y * U + x] -= (1 - d / r) * s; }
+  for (let [cx, cy, r, s] of Ls) {
+    cx /= 2; cy /= 2; r /= 2;
+    const x0 = max(0, floor(cx - r)), x1 = min(HU, ceil(cx + r)), y0 = max(0, floor(cy - r)), y1 = min(V / 2, ceil(cy + r));
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const d = sqrt((x + .5 - cx) ** 2 + (y + .5 - cy) ** 2); if (d < r) DV[y * HU + x] -= (1 - d / r) * s; }
   }
   for (let y = 0, n = 0; y < V; y++) for (let x = 0; x < U; x++, n++) {
-    const l = min(3, max(0, floor(DV[n] * 3 + BY[(y & 3) * 4 + (x & 3)] / 16)));
+    const l = min(3, max(0, floor(DV[(y >> 1) * HU + (x >> 1)] * 3 + BY[(y & 3) * 4 + (x & 3)] / 16)));
     DB[n] = (l * a0 * 85 | 0) << 24 | 0x080203;
   }
   DX.putImageData(DI, 0, 0); X.drawImage(DC, 0, 0);
 };
 
 // la criatura: se dibuja en vectores a escala pequeña y se cuantiza a una paleta corta con contorno de 1 px
-const [SPC, SPX] = mk(48, 40), SPI = SPX.createImageData(48, 40), SPB = new Uint32Array(SPI.data.buffer);
+const [SPC, SPX] = mk(48, 40, 1), SPI = SPX.createImageData(48, 40), SPB = new Uint32Array(SPI.data.buffer);
 const spr = (ph, air, cc, tt) => {
   const x = SPX; x.clearRect(0, 0, 48, 40); x.save(); x.translate(26, 27); x.scale(1.2, 1.2); x.lineCap = x.lineJoin = 'round';
   const E_ = (x_, y_, rx, ry) => { x.beginPath(); x.ellipse(x_, y_, rx, ry, 0, 0, 7); x.fill(); };
@@ -468,15 +483,21 @@ const draw = () => {
   // escenario
   X.save(); view(ox, oy);
   fr(-3000, camy - 3000, 3000, 6000, '#040309'); fr(WW, camy - 3000, 3000, 6000); fr(-3000, -3000, WW + 6000, 3000);
-  const lamps = [];
+  const lamps = [], VS = [];
   for (let j = max(0, floor((camy - VR) / RH)); j <= floor((camy + VR) / RH); j++) for (let i = max(0, floor((camx - VR) / RW)); i <= min(NC - 1, floor((camx + VR) / RW)); i++) {
     const R = room(i, j); if (!R) continue;
-    X.drawImage(R.img[q] || (R.img[q] = rend(R, q)), R.ox - 1, R.oy - 1);
+    if (!R.m) mapR(R);
+    VS.push(R); if (R.so) fr(R.ox, R.oy, RW, RH, '#040309');
+  }
+  for (const R of VS) {
+    if (!R.so) X.drawImage(R.img[q] || (R.img[q] = rend(R, q)), R.ox - PD, R.oy - PD);
     for (const [x, y] of R.lp) lamps.push(ws(x, y + 6));
   }
+  const VE = E.filter(e => abs(e.x - camx) < VR && abs(e.y - camy) < VR);
   // semillas de luz
-  for (const e of E) {
+  for (const e of VE) {
     const ex = round(e.x), ey = round(e.y), a = t * 3 + e.ph, rd = 4 + round(sin(t * 5 + e.ph));
+    if (e.s) { ga(.6 + .4 * sin(t * 6 - e.ph * .7)); fr(ex, ey, 1, 1, '#ffffff'); X.fillStyle = mix(ax.c, '#ffffff', .4); X.fillRect(ex - 1, ey, 1, 1); X.fillRect(ex + 1, ey, 1, 1); X.fillRect(ex, ey - 1, 1, 1); X.fillRect(ex, ey + 1, 1, 1); ga(1); continue; }
     fr(ex - 1, ey, 3, 1, '#ffffff'); fr(ex, ey - 1, 1, 3);
     X.fillStyle = mix(ax.c, '#ffffff', .5);
     for (let n = 0; n < 4; n++) { const aa = a + n * PI / 2; X.fillRect(round(ex + cos(aa) * rd), round(ey + sin(aa) * rd), 1, 1); }
@@ -491,15 +512,26 @@ const draw = () => {
   // luz
   const [px, py] = ws(p.x, p.y), Ls = [];
   if (st != 'over') Ls.push([px + ox, py + oy, 60 + L * 1.6, 1.8]);
-  for (const e of E) { const [a, b] = ws(e.x, e.y); Ls.push([a + ox, b + oy, 26, .8]); }
+  for (const e of VE) if (!e.s) { const [a, b] = ws(e.x, e.y); Ls.push([a + ox, b + oy, 26, .8]); }
   if (q == 2) for (const [a, b] of lamps) Ls.push([a + ox, b + oy, 75, 1.8]);
   dark(Ls, lp(.93, .55, L / 100));
   X.globalCompositeOperation = 'lighter';
   if (st != 'over') { lt(X, '#fff0d0', px + ox, py + oy, 18 + L * .1, .45); lt(X, ax.c, px + ox, py + oy, 40, .14); }
   if (q == 2) for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 30, .8);
-  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(X, '#bfe6ff', a + ox, b + oy, 12, .6); }
+  for (const e of VE) { const [a, b] = ws(e.x, e.y); lt(X, e.s ? ax.c : '#bfe6ff', a + ox, b + oy, e.s ? 6 : 12, e.s ? .5 : .6); }
+  // los obstáculos brillan por encima de la oscuridad
+  for (const R of VS) for (const [x, y, nx, ny] of R.sp) { const [a, b] = ws(x + nx * 6, y + ny * 6); lt(X, '#ff2e55', a + ox, b + oy, 9, .55); }
+  for (const c of CO) if (c[0] == q && abs(c[1] - camx) < VR && abs(c[2] - camy) < VR) { const [a, b] = ws((c[1] + c[3]) / 2, (c[2] + c[4]) / 2); lt(X, ax.c, a + ox, b + oy, max(c[3] - c[1], c[4] - c[2]) * .75, .3 + .12 * sin(t * 6)); }
   X.globalCompositeOperation = 'source-over';
   if (st == 'play') { spr(p.ph, p.g <= 0, ax.c, t); X.save(); X.translate(round(px + ox), round(py + oy)); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
+  if (st == 'play' && WP[wi]) {
+    const [a, b] = ws(...WP[wi]), an = Math.atan2(b - py, a - px), dd_ = hypot(a - px, b - py);
+    if (dd_ > 45) {
+      X.save(); X.translate(round(px + ox + cos(an) * 34), round(py + oy + sin(an) * 34)); X.rotate(an); ga(.7 + .3 * sin(t * 7));
+      X.fillStyle = mix(ax.c, '#ffffff', .6); for (let k = 0; k < 6; k++) { X.fillRect(-k, -k - 1, 3, 2); X.fillRect(-k, k - 1, 3, 2); }
+      ga(1); X.restore();
+    }
+  }
   if (fl > 0) { ga(fl * .35); fr(0, 0, U, V, ax.c); ga(1); }
   if (st == 'title') {
     ga(.55); fr(0, 0, U, V, '#05040b'); ga(1);
