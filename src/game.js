@@ -126,7 +126,7 @@ const mus = dt => {
 // túneles, cámaras y cuevas laterales. Las cuevas se tallan con cápsulas deformadas por ruido,
 // píxel a píxel: lo que ves es exactamente lo que colisiona.
 // materia: 0 aire · 1 roca · 2..5 materia del axioma 0..3
-let st = 'title', t = 0, th = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
+let st = 'title', t = 0, th = 0, ca = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
   vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
 let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0;
 // biomas: cada 5 filas de salas el pozo cambia de escenario
@@ -376,7 +376,7 @@ const reset = () => {
   while (gr < 5) gen();
   const R0 = room(2, 0);
   p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
-  th = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
+  th = ca = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
   pbi = bn = 0; DM = [...Array(46)].map(() => ({ x: rr(0, U), y: rr(0, V), ph: rnd() * 7, s: rnd() < .3 ? 2 : 1 }));
 };
 const start = () => { reset(); st = 'play'; t = 0; ban = 2.2; S.n++; save(); sfx('go'); };
@@ -412,20 +412,24 @@ const phys = dt => {
 
 const die = w => {
   if (st != 'play') return;
-  st = 'over'; ot = 0; why = w; sh = 8; fl = .6;
+  st = 'over'; ot = 0; why = w; sh = 5; fl = .4;
   burst(p.x, p.y, '#fff4d0', 50, 180); burst(p.x, p.y, AX[q].c, 25, 120); sfx('die');
   if (score > S.b) { S.b = score; rec = 1; }
   S.d = max(S.d, depth); save();
 };
 const near = f => { const rx = floor(p.x / RW), ry = floor(p.y / RH); for (let j = ry - 1; j <= ry + 1; j++) for (let i = rx - 1; i <= rx + 1; i++) { const R = room(i, j); if (R && R.m) f(R); } };
 
+// el axioma (color) se elige con botones; girar sólo cambia la gravedad
+const sel = k => {
+  k = (k % 4 + 4) % 4; if (st != 'play' || k == q) return;
+  q = pq = k; L -= 1; fl = .2; ban = 1.1; sfx('sw'); burst(p.x, p.y, AX[q].c, 14, 90);
+};
 const upd = dt => {
   t += dt;
   const dir = (K.ArrowRight || K.KeyD ? 1 : 0) - (K.ArrowLeft || K.KeyA ? 1 : 0);
   rv = lp(rv, dir * 3.3, min(1, dt * 14));
   const dth = rv * dt + drag; th += dth; drag = 0;
-  q = ((round(th / (PI / 2)) % 4) + 4) % 4;
-  if (q != pq) { pq = q; fl = .5; ban = 1.4; sh = max(sh, 2); sfx('sw'); burst(p.x, p.y, AX[q].c, 18, 100); }
+  ca = lp(ca, th, min(1, dt * 7)); // la cámara sigue el giro con suavidad (marea menos)
   const ts = q == 3 ? .7 : 1, dts = dt * ts;
   for (let n = ceil(dts / .004), k = n; k--;) phys(dts / n);
   p.g -= dts; p.sq = max(0, p.sq - dt * 5);
@@ -471,8 +475,8 @@ const upd = dt => {
 };
 
 // ---------- dibujo ----------
-const ws = (x, y) => { const dx = x - camx, dy = y - camy, c = cos(th), s = sin(th); return [U / 2 + dx * c - dy * s, V / 2 + dx * s + dy * c]; };
-const view = (ox, oy, f = 1) => { X.translate(U / 2 + ox, V / 2 + oy); X.rotate(th); X.translate(-round(camx * f), -round(camy * f)); };
+const ws = (x, y) => { const dx = x - camx, dy = y - camy, c = cos(ca), s = sin(ca); return [U / 2 + dx * c - dy * s, V / 2 + dx * s + dy * c]; };
+const view = (ox, oy, f = 1) => { X.translate(U / 2 + ox, V / 2 + oy); X.rotate(ca); X.translate(-round(camx * f), -round(camy * f)); };
 const VR = 290; // radio visible en px de mundo
 // prepara por adelantado la materia y las imágenes de las salas cercanas, con un presupuesto de 4 ms por cuadro
 const pre = () => {
@@ -594,7 +598,7 @@ const draw = () => {
   for (const R of VS) for (const [x, y, nx, ny] of R.sp) { const [a, b] = ws(x + nx * 6, y + ny * 6); lt(X, '#ff2e55', a + ox, b + oy, 9, .55); }
   for (const c of CO) if (c[0] == q && abs(c[1] - camx) < VR && abs(c[2] - camy) < VR) { const [a, b] = ws((c[1] + c[3]) / 2, (c[2] + c[4]) / 2); lt(X, ax.c, a + ox, b + oy, max(c[3] - c[1], c[4] - c[2]) * .75, .3 + .12 * sin(t * 6)); }
   X.globalCompositeOperation = 'source-over';
-  if (st == 'play') { spr(p.ph, p.g <= 0, ax.c, t); X.save(); X.translate(round(px + ox), round(py + oy)); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
+  if (st == 'play') { spr(p.ph, p.g <= 0, ax.c, t); X.save(); X.translate(round(px + ox), round(py + oy)); X.rotate(th - ca); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
   if (st == 'play' && WP[wi]) {
     const [a, b] = ws(...WP[wi]), an = Math.atan2(b - py, a - px), dd_ = hypot(a - px, b - py);
     if (dd_ > 45) {
@@ -618,11 +622,12 @@ const draw = () => {
     const lw = tx('AXIOMI', -999, 0, '#000', 9);
     let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y, c, 9); x += 6.4 * .95 * 9; });
     txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', U / 2, 96, '#e8e4ff', 2, 1);
-    AX.forEach((a, k) => { tx(a.n, 90 + k * 100, 176, a.c, 1, 1); });
-    txs('<  >  GIRAR       ESPACIO  SALTAR', U / 2, 196, '#b8b0e0', 1, 1);
-    txs('SOLO LO DEL COLOR DEL AXIOMA ES SOLIDO', U / 2, 208, '#8a84b8', 1, 1);
-    if (t % 1 < .65) txs('PULSA ESPACIO', U / 2, 226, '#ffffff', 2, 1);
-    if (S.b) txs('RECORD ' + S.b + '   PROF ' + S.d + 'M', U / 2, 252, '#ffd75e', 1, 1);
+    AX.forEach((a, k) => { tx(k + 1 + ' ' + a.n, 90 + k * 100, 176, a.c, 1, 1); });
+    txs('<  >  GIRAR EL MUNDO      ESPACIO  SALTAR', U / 2, 194, '#b8b0e0', 1, 1);
+    txs('1 2 3 4  O  Q E  CAMBIAR DE COLOR', U / 2, 206, '#b8b0e0', 1, 1);
+    txs('SOLO LO DE TU COLOR ES SOLIDO', U / 2, 218, '#8a84b8', 1, 1);
+    if (t % 1 < .65) txs('PULSA ESPACIO', U / 2, 236, '#ffffff', 2, 1);
+    if (S.b) txs('RECORD ' + S.b + '   PROF ' + S.d + 'M', U / 2, 258, '#ffd75e', 1, 1);
     return;
   }
   // barra de luz
@@ -631,18 +636,18 @@ const draw = () => {
   X.save(); X.shadowColor = lc; X.shadowBlur = 10; X.strokeStyle = lc; X.beginPath(); X.moveTo(12, 13); X.lineTo(12 + 96 * L / 100, 13); X.stroke(); X.restore();
   txs('LUZ', 116, 10, lc);
   txs(depth + 'M', U - 10, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 10, 33, '#9ad8ff', 1, 2); txs(BN[pbi], U - 10, 45, '#8a84b8', 1, 2);
-  // brújula de axiomas
-  const cx = U - 26, cy = V - 26;
-  X.lineWidth = .8; X.strokeStyle = '#ffffff30'; X.beginPath(); X.arc(cx, cy, 13, 0, 7); X.stroke();
+  // selector de color: 1 2 3 4 (en pantallas táctiles también son botones)
   for (let k = 0; k < 4; k++) {
-    const a = k * PI / 2 - th, on = k == q; X.save(); if (on) { X.shadowColor = AX[k].c; X.shadowBlur = 10; }
-    X.fillStyle = on ? AX[k].c : AX[k].k; X.beginPath(); X.arc(cx + sin(a) * 13, cy - cos(a) * 13, on ? 3.4 : 2.2, 0, 7); X.fill(); X.restore();
+    const x = U - 98 + k * 23, y = V - 26, on = k == q;
+    X.save(); if (on) { X.shadowColor = AX[k].c; X.shadowBlur = 12; }
+    X.fillStyle = on ? AX[k].c : AX[k].k; X.beginPath(); X.roundRect(x, y, 19, 19, 4); X.fill(); X.restore();
+    if (on) { X.strokeStyle = '#ffffff'; X.lineWidth = 1; X.beginPath(); X.roundRect(x - 1.5, y - 1.5, 22, 22, 5); X.stroke(); }
+    tx(k + 1, x + 9.5, y + 6.5, on ? '#000000' : '#ffffffaa', 1, 1);
   }
-  X.strokeStyle = '#ffffff'; X.lineWidth = 1; X.beginPath(); X.moveTo(cx, cy - 7); X.lineTo(cx, cy - 2); X.stroke(); X.beginPath(); X.arc(cx, cy, 1.2, 0, 7); X.fillStyle = '#ffffff'; X.fill();
-  txs(ax.n, U - 46, V - 29, ax.c, 1, 2);
+  txs(ax.n, U - 8, V - 38, ax.c, 1, 2);
   if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); ga(1); }
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
-  if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA CORRER POR LOS TUNELES.', U / 2, V - 20, '#e8e4ff', 1, 1);
+  if (st == 'play' && t < 8 && S.n < 5) { txs('< > GIRA EL MUNDO PARA CAER HACIA LOS LADOS', U / 2, V - 58, '#e8e4ff', 1, 1); txs('1 2 3 4 CAMBIA DE COLOR: SOLO TU COLOR ES SOLIDO', U / 2, V - 46, '#e8e4ff', 1, 1); }
   if (st == 'over') {
     txs('APAGADO', U / 2, 50, '#ff6080', 4, 1);
     txs(why, U / 2, 86, '#e8e4ff', 1, 1);
@@ -660,11 +665,20 @@ onkeydown = e => {
   au(); K[e.code] = 1;
   if (/Arrow|Space/.test(e.code)) e.preventDefault();
   if (!e.repeat && /Space|ArrowUp|KeyW|Enter/.test(e.code)) act();
+  const dg = /^(Digit|Numpad)([1-4])$/.exec(e.code);
+  if (dg) sel(dg[2] - 1);
+  if (e.code == 'KeyQ') sel(q - 1);
+  if (e.code == 'KeyE') sel(q + 1);
   if (e.code == 'KeyM') { S.m ^= 1; save(); if (MG) MG.gain.value = S.m ? 0 : .5; }
 };
 onkeyup = e => K[e.code] = 0;
 let pd = 0;
-cv.onpointerdown = e => { au(); pd = { x: e.clientX, m: 0 }; };
+cv.onpointerdown = e => {
+  au();
+  const r = cv.getBoundingClientRect(), gx = (e.clientX - r.left) / r.width * U, gy = (e.clientY - r.top) / r.height * V, k = floor((gx - U + 99.5) / 23);
+  if (st == 'play' && gy > V - 30 && k >= 0 && k < 4) { sel(k); pd = 0; return; } // botones de color
+  pd = { x: e.clientX, m: 0 };
+};
 onpointermove = e => { if (!pd) return; const dx = (e.clientX - pd.x) * W / cv.clientWidth; pd.x = e.clientX; pd.m += abs(dx); if (st == 'play') drag += dx * .015; };
 onpointerup = () => { if (pd && pd.m < 4) act(); pd = 0; };
 
@@ -676,7 +690,7 @@ const loop = ts => {
   if (st == 'play') upd(dt);
   else {
     t += dt; ot += dt; upP(dt); mus(dt);
-    if (st == 'title') { th = sin(t * .45) * 2.4; q = pq = ((round(th / (PI / 2)) % 4) + 4) % 4; camx = p.x + sin(t * .2) * 40; camy = p.y + 30 + sin(t * .3) * 30; }
+    if (st == 'title') { th = ca = sin(t * .45) * .7; q = pq = floor(t * .7) % 4; camx = p.x + sin(t * .2) * 40; camy = p.y + 30 + sin(t * .3) * 30; }
   }
   sh = max(0, sh - dt * 12); fl = max(0, fl - dt * 2.5); ban -= dt; bn -= dt;
   pre(); draw();

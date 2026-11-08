@@ -1,6 +1,6 @@
 # AXIOMI
 
-Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Al girar no solo cambia la gravedad: cada orientación es un **axioma** con sus propias reglas, colores y música.
+Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Girar el mundo cambia hacia dónde cae la gravedad; con botones eliges uno de cuatro **axiomas** (colores), cada uno con sus propias reglas y música.
 
 **Jugar:** https://ricardious.github.io/axiomi/
 
@@ -8,22 +8,21 @@ Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña c
 
 | Acción | Teclado | Ratón / táctil |
 |---|---|---|
-| Girar el mundo | `←` `→` o `A` `D` | arrastrar a los lados |
+| Girar el mundo (gravedad) | `←` `→` o `A` `D` | arrastrar a los lados |
 | Saltar | `Espacio`, `↑` o `W` | toque |
+| Cambiar de color (axioma) | `1` `2` `3` `4`, o `Q` / `E` | botones de color (abajo a la derecha) |
 | Sonido on/off | `M` | — |
 
 ## Los cuatro axiomas
 
-El ángulo del mundo decide qué axioma está activo. **Solo los bloques del color del axioma son sólidos**; los demás se vuelven fantasmas.
+Eliges el axioma con su botón. **Solo los bloques de tu color son sólidos**; los demás se vuelven fantasma y los atraviesas.
 
-| Orientación | Axioma | Regla |
+| Tecla | Axioma | Regla |
 |---|---|---|
-| Normal (0°) | **FLUJO** (cian) | lo cian es sólido |
-| Inclinado a la derecha (90°) | **PULSO** (magenta) | lo magenta es sólido; salto fuerte |
-| Boca abajo (180°) | **BRASA** (ámbar) | lo ámbar es sólido; las lámparas recargan tu luz |
-| Inclinado a la izquierda (270°) | **RAÍZ** (verde) | lo verde es sólido; el tiempo se frena, pero la luz se gasta más |
-
-El truco: inclinar el mundo justo más allá de 45° hace desaparecer un suelo de color mientras la gravedad todavía apunta hacia abajo.
+| `1` | **FLUJO** (cian) | lo cian es sólido |
+| `2` | **PULSO** (magenta) | lo magenta es sólido; salto fuerte |
+| `3` | **BRASA** (ámbar) | lo ámbar es sólido; las lámparas recargan tu luz |
+| `4` | **RAÍZ** (verde) | lo verde es sólido; el tiempo se frena, pero la luz se gasta más |
 
 ## Biomas
 
