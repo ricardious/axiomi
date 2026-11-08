@@ -1,6 +1,6 @@
 # AXIOMI
 
-Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por un pozo oscuro sin fondo. Al girar no solo cambia la gravedad: cada orientación es un **axioma** con sus propias reglas, colores y música.
+Arcade experimental de siluetas y neón: **giras el mundo** para mover a una pequeña criatura de luz por un pozo oscuro sin fondo. Al girar no solo cambia la gravedad: cada orientación es un **axioma** con sus propias reglas, colores y música.
 
 **Jugar:** https://ricardious.github.io/axiomi/
 
@@ -34,9 +34,9 @@ El truco: inclinar el mundo justo más allá de 45° hace desaparecer un suelo d
 
 ## Reglas del reto
 
-- **≤ 32 KB:** el juego completo es un único `index.html` (~11 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
+- **≤ 32 KB:** el juego completo es un único `index.html` (~14 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
 - **Código propio:** JavaScript puro con Canvas 2D y Web Audio. Sin librerías, frameworks ni motores.
-- **Cero assets:** el pixel art, la iluminación, la fuente 3×5, los efectos y la música generativa se crean con código.
+- **Cero assets:** los escenarios orgánicos, la criatura, la iluminación, la tipografía vectorial, los efectos y la música generativa se crean con código.
 
 ## Desarrollo
 
