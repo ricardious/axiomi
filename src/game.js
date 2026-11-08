@@ -1,14 +1,14 @@
 // AXIOMI — gira el mundo, cambia sus reglas. Todo dibujado y sonado con código.
 (() => {
 'use strict';
-const W = 480, H = 270, T = 12, CW = 20, RH = 12, G = 650, MV = 400;
+const W = 960, H = 540, Z = 2, T = 12, CW = 20, RH = 12, G = 650, MV = 400;
 const { floor, min, max, abs, sin, cos, hypot, PI, random: rnd, round, sqrt, ceil } = Math, D = document;
 const cl = (v, a, b) => v < a ? a : v > b ? b : v, lp = (a, b, k) => a + (b - a) * k;
 const rr = (a, b) => a + rnd() * (b - a), ri = (a, b) => floor(rr(a, b + 1)), pk = a => a[floor(rnd() * a.length)];
 const hs = (i, j) => { let h = Math.imul(i | 0, 374761393) + Math.imul(j | 0, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
 const mk = (w, h) => { const c = D.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; };
 const cv = D.getElementById('c'), X = cv.getContext('2d');
-cv.width = W; cv.height = H; X.imageSmoothingEnabled = false;
+cv.width = W; cv.height = H;
 const fr = (x, y, w, h, c) => { if (c) X.fillStyle = c; X.fillRect(x, y, w, h); }, ga = a => X.globalAlpha = a;
 const [DC, DX] = mk(W, H);
 const rsz = () => { const s = min(innerWidth / W, innerHeight / H); cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; };
@@ -114,20 +114,20 @@ const mus = dt => {
 };
 
 // ---------- mundo ----------
-// tiles: 0 aire · 1 roca · 2..5 bloque del axioma 0..3 · 6 púas · 7 lámpara
+// plano grueso (12 px): 0 aire · 1 roca · 2..5 materia del axioma 0..3 · 6 espinas · 7 lámpara
+// el plano se deforma con ruido sobre una rejilla fina (4 px) y se contornea con marching squares:
+// así las cuevas son orgánicas y la colisión coincide exactamente con lo que se ve.
 let st = 'title', t = 0, th = 0, rv = 0, q = 0, pq = 0, M = new Map(), gy = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
-  vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, pgx = 8, pgw = 4, rec = 0, lpT = 0;
-const Z = new Uint8Array(CW);
-const tile = (i, j) => i < 0 || i >= CW || j < 0 ? 1 : (M.get(j) || Z)[i];
-const solT = v => v == 1 || v > 1 && v < 6 && v - 2 == q;
-const sol = (i, j) => solT(tile(i, j));
+  vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, pgx = 8, pgw = 4, rec = 0, lpT = 0, DM = [];
+const Zr = new Uint8Array(CW);
+const tile = (i, j) => i < 0 || i >= CW || j < 0 ? 1 : (M.get(j) || Zr)[i];
 const DN = [0, 1, 3]; // axiomas en los que la gravedad aún apunta hacia abajo
 
 const gen = () => {
   const j0 = gy, d = min(1, j0 / 1400), R = [], F = RH - 1;
   for (let k = 0; k < RH; k++) R.push(new Uint8Array(CW));
   const st_ = (i, k, v) => { if (i >= 0 && i < CW && k >= 0 && k < RH) R[k][i] = v; };
-  const gw = j0 < 40 ? 4 : ri(2, 3) + (rnd() < .3 - d * .3), pat = j0 < 30 ? 0 : pk(j0 < 140 ? [0, 0, 3, 1] : j0 < 300 ? [0, 1, 3, 2, 4] : [0, 1, 2, 2, 3, 4, 4]);
+  const gw = j0 < 40 ? 4 : 3 + (rnd() < .35 - d * .3), pat = j0 < 30 ? 0 : pk(j0 < 140 ? [0, 0, 3, 1] : j0 < 300 ? [0, 1, 3, 2, 4] : [0, 1, 2, 2, 3, 4, 4]);
   let gx = ri(1, CW - gw - 1), a = pk(DN);
   if (pat == 4) gx = a == 1 ? CW - gw : a == 3 ? 0 : gx;
   if (pat == 1 && j0 < 200) a = 0;
@@ -147,17 +147,145 @@ const gen = () => {
       if (v == 1 && rnd() < d * .8) st_(i0 + ri(0, w - 1), k - 1, 6);
     }
     if (rnd() < .5) st_(rnd() < .5 ? 0 : CW - 1, ri(2, F - 3), 7);
-    for (let n = ri(1, 3); n--;) { const i = ri(1, CW - 2), k = ri(1, F - 3); if (!R[k][i]) E.push({ x: i * T + 6, y: (j0 + k) * T + 6, ph: rnd() * 6 }); }
+    for (let n = ri(1, 3); n--;) { const i = ri(1, CW - 2), k = ri(1, F - 3); if (!R[k][i] && !R[k + 1][i]) E.push({ x: i * T + 6, y: (j0 + k) * T + 6, ph: rnd() * 6 }); }
   }
   pgx = gx; pgw = gw;
   R.forEach((r, k) => M.set(j0 + k, r)); gy += RH;
 };
 
+const C = 4, PX = 48, FW = (CW * T + PX * 2) / C, FH = RH * T / C, CH = FH * C, PAD = 30;
+const MT = new Map(), CF = new Map(), CC = new Map();
+const vn = (x, y) => { const i = floor(x), j = floor(y), u = x - i, v = y - j, s = k => k * k * (3 - 2 * k); return lp(lp(hs(i, j), hs(i + 1, j), s(u)), lp(hs(i, j + 1), hs(i + 1, j + 1), s(u)), s(v)) * 2 - 1; };
+const cells = k => {
+  let m = MT.get(k); if (m) return m;
+  while (gy < (k + 2) * RH) gen();
+  m = new Uint8Array(FW * FH);
+  for (let j = 0; j < FH; j++) for (let i = 0; i < FW; i++) {
+    const x = i * C - PX + 2, y = (k * FH + j) * C + 2;
+    const wb = max(0, vn(x < 120 ? 3.3 : 8.7, y * .022)) * 11, dx = vn(x * .045, y * .045) * 6 + vn(x * .18 + 50, y * .18) * 1.6 + (x < 26 ? -wb : x > CW * T - 26 ? wb : 0),
+      v = tile(floor((x + dx) / T), floor((y + vn(x * .045 + 40, y * .045 + 70) * 6.5 + vn(x * .16, y * .16 + 9) * 1.5) / T));
+    m[j * FW + i] = v < 6 ? v : 0;
+  }
+  MT.set(k, m); return m;
+};
+const cell = (i, j) => i < 0 || i >= FW || j < 0 ? 1 : cells(floor(j / FH))[(j % FH) * FW + i];
+// campos en las esquinas: 0 roca, 1..4 materia de cada axioma
+const corn = k => {
+  let c = CF.get(k); if (c) return c;
+  c = [0, 1, 2, 3, 4].map(() => new Float32Array((FW + 1) * FH));
+  for (let j = k * FH; j < (k + 1) * FH; j++) for (let i = 0; i <= FW; i++)
+    for (const m of [cell(i - 1, j - 1), cell(i, j - 1), cell(i - 1, j), cell(i, j)]) if (m) c[m - 1][(j - k * FH) * (FW + 1) + i] += .25;
+  CF.set(k, c); return c;
+};
+const cf = (i, j, s) => i < 0 || i > FW || j < 0 ? +!s : corn(floor(j / FH))[s][(j % FH) * (FW + 1) + i];
+// campo sólido (>.5 = dentro) con interpolación bilineal; coincide con el contorno dibujado
+const fld = (x, y) => {
+  const gx = (x + PX) / C, gy_ = y / C, i = floor(gx), j = floor(gy_), u = gx - i, v = gy_ - j;
+  let f = 0;
+  for (const s of [0, q + 1]) f += lp(lp(cf(i, j, s), cf(i + 1, j, s), u), lp(cf(i, j + 1, s), cf(i + 1, j + 1, s), u), v);
+  return f;
+};
+
+// ---------- trozos de escenario cacheados (uno por sala y axioma) ----------
+const chunk = (k, qq) => {
+  const key = k * 4 + qq; let cc = CC.get(key); if (cc) return cc;
+  const [cn, x] = mk(FW * C * Z, (CH + PAD * 2) * Z);
+  x.imageSmoothingEnabled = true; x.scale(Z, Z); x.translate(PX, PAD - k * CH);
+  x.lineCap = x.lineJoin = 'round';
+  const ac = AX[qq].c, tip = mix(ac, '#ffffff', .35), j0 = k * FH, I0 = k * RH;
+  // contorno de una materia: devuelve el relleno y los segmentos del borde con su normal exterior
+  const iso = s => {
+    const Pp = new Path2D(), Sg = [];
+    for (let j = j0; j < j0 + FH; j++) for (let i = 0; i < FW; i++) {
+      const a = cf(i, j, s), b = cf(i + 1, j, s), c = cf(i + 1, j + 1, s), d = cf(i, j + 1, s);
+      if (a + b + c + d == 0) continue;
+      const X0 = i * C - PX, Y0 = j * C;
+      if (a > .5 && b > .5 && c > .5 && d > .5) { Pp.rect(X0, Y0, C, C); continue; }
+      const cs = [[a, X0, Y0], [b, X0 + C, Y0], [c, X0 + C, Y0 + C], [d, X0, Y0 + C]], pts = [], cr_ = [];
+      for (let n = 0; n < 4; n++) {
+        const [va, xa, ya] = cs[n], [vb, xb, yb] = cs[(n + 1) % 4];
+        if (va > .5) pts.push([xa, ya]);
+        if ((va > .5) != (vb > .5)) { const f = (.5 - va) / (vb - va), e = [xa + (xb - xa) * f, ya + (yb - ya) * f]; pts.push(e); cr_.push(e); }
+      }
+      if (pts.length > 2) { Pp.moveTo(...pts[0]); for (const e of pts) Pp.lineTo(...e); Pp.closePath(); }
+      const gx = b + c - a - d, gy_ = c + d - a - b, gl = hypot(gx, gy_) || 1;
+      for (let n = 0; n + 1 < cr_.length; n += 2) Sg.push([...cr_[n], ...cr_[n + 1], -gx / gl, -gy_ / gl]);
+    }
+    return [Pp, Sg];
+  };
+  const seg = (Sg, c, w, al) => { x.globalAlpha = al; x.strokeStyle = c; x.lineWidth = w; x.beginPath(); for (const [a, b, c_, d] of Sg) { x.moveTo(a, b); x.lineTo(c_, d); } x.stroke(); x.globalAlpha = 1; };
+  const line = (pts, w) => { x.lineWidth = w; x.beginPath(); x.moveTo(...pts[0]); for (let n = 1; n < pts.length; n++) x.lineTo(...pts[n]); x.stroke(); };
+  // roca: silueta negra con borde de luz
+  const [RP, RS] = iso(0);
+  x.fillStyle = x.strokeStyle = '#030207'; x.fill(RP); x.lineWidth = .7; x.stroke(RP);
+  seg(RS, mix(ac, '#ffffff', .25), 1.4, .25); seg(RS, tip, .6, .8);
+  // flora en siluetas: hierba, helechos, hongos, raíces colgantes
+  x.strokeStyle = x.fillStyle = '#030207';
+  for (const [a, b, c_, d, nx, ny] of RS) {
+    const mx = (a + c_) / 2, my = (b + d) / 2, h = hs(round(mx * 3), round(my * 3)), h2 = hs(round(my * 7), round(mx * 5));
+    if (mx < -6 || mx > CW * T + 6) continue;
+    if (ny < -.6) {
+      if (h < .5) for (let n = 0; n < 1 + (h2 * 3 | 0); n++) {
+        const bx = mx + n * 1.3 - 1, ln = 3 + hs(n, round(mx * 9)) * 7, bend = (h2 - .5) * 5;
+        x.lineWidth = .9; x.beginPath(); x.moveTo(bx, my + 1); x.quadraticCurveTo(bx + bend * .3, my - ln * .6, bx + bend, my - ln); x.stroke();
+        if (h2 < .45) { x.fillStyle = tip; x.fillRect(bx + bend - .5, my - ln - .5, 1.2, 1.2); x.fillStyle = '#030207'; }
+      }
+      else if (h < .56) { // hongo
+        const hh = 5 + h2 * 9, cw = 3 + h2 * 4;
+        x.lineWidth = 1.4; x.beginPath(); x.moveTo(mx, my + 1); x.quadraticCurveTo(mx + 2, my - hh / 2, mx + .5, my - hh); x.stroke();
+        x.beginPath(); x.ellipse(mx + .5, my - hh, cw, cw * .55, 0, PI, 0); x.fill();
+        x.fillStyle = ac; for (let n = -1; n <= 1; n++) x.fillRect(mx + .5 + n * cw * .55 - .5, my - hh + .4, 1, 1); x.fillStyle = '#030207';
+      } else if (h < .62) { // helecho
+        const ln = 8 + h2 * 8, dir = h2 < .5 ? -1 : 1;
+        const pts = []; for (let n = 0; n <= 8; n++) { const u = n / 8; pts.push([mx + dir * u * u * ln * .6, my - u * ln]); }
+        line(pts, 1);
+        for (let n = 2; n < 8; n++) { const [px_, py_] = pts[n], fl_ = (9 - n) * .5; x.lineWidth = .6; x.beginPath(); x.moveTo(px_, py_); x.lineTo(px_ - fl_, py_ - fl_ * .4); x.moveTo(px_, py_); x.lineTo(px_ + fl_, py_ - fl_ * .4); x.stroke(); }
+      }
+    } else if (ny > .6 && h < .32) { // raíces que cuelgan del techo
+      const ln = 5 + h2 * 24, pts = [];
+      for (let n = 0; n <= 10; n++) { const u = n / 10; pts.push([mx + sin(u * 4 + h * 20) * u * 3, my - 1 + u * ln]); }
+      line(pts, 1.3 - h2 * .6);
+      if (h < .06) { x.fillStyle = tip; x.beginPath(); x.arc(pts[10][0], pts[10][1] + 1.5, 1.6, 0, 7); x.fill(); x.fillStyle = '#030207'; }
+    } else if (abs(nx) > .7 && h < .15) { // musgo en las paredes
+      for (let n = 0; n < 3; n++) { x.beginPath(); x.arc(mx + nx * 1.2, my + (n - 1) * 1.6, 1.1 + h2, 0, 7); x.fill(); }
+    }
+  }
+  // espinas y lámparas (en el plano grueso)
+  for (let J = I0; J < I0 + RH; J++) for (let I = 0; I < CW; I++) {
+    const v = tile(I, J), bx = I * T, by = J * T;
+    if (v == 6) for (let n = 0; n < 4; n++) {
+      const sx = bx + 1 + n * 3 + hs(I + n, J) * 1.5, hh = 7 + hs(J, I + n) * 5, lean = (hs(I * 3, J + n) - .5) * 3;
+      x.fillStyle = '#030207'; x.beginPath(); x.moveTo(sx - 1.6, by + T + 1); x.lineTo(sx + lean, by + T - hh); x.lineTo(sx + 1.6, by + T + 1); x.fill();
+      x.fillStyle = '#ff2e55'; x.beginPath(); x.moveTo(sx + lean * .75 - .7, by + T - hh * .72); x.lineTo(sx + lean, by + T - hh); x.lineTo(sx + lean * .75 + .7, by + T - hh * .72); x.fill();
+    }
+    if (v == 7) {
+      const s = I ? -1 : 1, wx = I ? CW * T + 2 : -2, cx = bx + 6, cy = by + 7, on = qq == 2;
+      x.strokeStyle = '#030207'; line([[wx, by + 1], [wx + s * 4, by - 2], [cx, by + 1], [cx, cy - 3]], 1.2);
+      x.fillStyle = '#030207'; x.beginPath(); x.ellipse(cx, cy, 3.6, 4.4, 0, 0, 7); x.fill();
+      x.fillStyle = on ? '#ffe6a8' : '#4a3418'; x.beginPath(); x.ellipse(cx, cy + .5, 2.3, 3, 0, 0, 7); x.fill();
+      if (on) { x.fillStyle = '#ffffff'; x.fillRect(cx - .6, cy - .5, 1.2, 2); }
+    }
+  }
+  // materia de los axiomas: sólida en su axioma, fantasma en los demás
+  for (let kk = 0; kk < 4; kk++) {
+    const [MP, MS] = iso(kk + 1), c = AX[kk].c;
+    if (!MS.length) continue;
+    if (kk == qq) {
+      x.fillStyle = mix(c, '#05040b', .62); x.strokeStyle = x.fillStyle; x.fill(MP); x.lineWidth = .7; x.stroke(MP);
+      x.save(); x.clip(MP); x.globalAlpha = .35; x.strokeStyle = c; x.lineWidth = .6; x.beginPath();
+      for (let n = -40; n < 140; n++) { const yy = k * CH + n * 5 - 200; x.moveTo(-PX, yy); x.lineTo(CW * T + PX, yy + 120); } x.stroke(); x.restore();
+      seg(MS, c, 2.4, .35); seg(MS, mix(c, '#ffffff', .4), 1, 1);
+    } else { x.setLineDash([2, 2.5]); seg(MS, c, .9, .5); x.setLineDash([]); }
+  }
+  CC.set(key, cn); return cn;
+};
+
 const reset = () => {
-  M.clear(); E = []; P = []; gy = 0; pgx = 8; pgw = 4;
+  M.clear(); MT.clear(); CF.clear(); CC.clear(); E = []; P = []; gy = 0; pgx = 8; pgw = 4;
   while (gy < 60) gen();
-  p = { x: CW * T / 2, y: 3 * T, vx: 0, vy: 0, r: 5.5, g: 0, sq: 0 };
+  p = { x: CW * T / 2, y: 3 * T, vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, an: 0, nx: 0, ny: -1 };
   th = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = -220; camx = p.x; camy = p.y; rec = 0; hb = 0;
+  DM = [...Array(46)].map(() => ({ x: p.x + rr(-260, 260), y: p.y + rr(-260, 260), ph: rnd() * 7, s: rr(.4, 1.2) }));
 };
 const start = () => { reset(); st = 'play'; t = 0; ban = 2.2; S.n++; save(); sfx('go'); };
 
@@ -167,27 +295,32 @@ const burst = (x, y, c, n, s) => { for (let i = 0; i < n; i++) { const a = rnd()
 const upP = dt => { for (const e of P) { e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= 1 - 2 * dt; e.vy *= 1 - 2 * dt; e.l -= dt; } P = P.filter(e => e.l > 0); };
 
 // ---------- física ----------
+const SA = [...Array(14)].map((_, k) => [cos(k * PI / 7), sin(k * PI / 7)]);
 const phys = dt => {
-  const sx = sin(th), sy = cos(th);
+  const sx = sin(th), sy = cos(th), r = p.r;
   p.vx += sx * G * dt; p.vy += sy * G * dt;
   const sp = hypot(p.vx, p.vy); if (sp > MV) { p.vx *= MV / sp; p.vy *= MV / sp; }
   p.x += p.vx * dt; p.y += p.vy * dt;
-  const r = p.r;
-  for (let j = floor((p.y - r) / T); j <= floor((p.y + r) / T); j++) for (let i = floor((p.x - r) / T); i <= floor((p.x + r) / T); i++) {
-    if (!sol(i, j)) continue;
-    const cx = cl(p.x, i * T, i * T + T), cy = cl(p.y, j * T, j * T + T), dx = p.x - cx, dy = p.y - cy, d = hypot(dx, dy);
-    if (d >= r) continue;
-    if (d < .01) { p.x -= sx * 2; p.y -= sy * 2; continue; } // dentro de un bloque que acaba de solidificarse
-    const nx = dx / d, ny = dy / d, vn = p.vx * nx + p.vy * ny;
-    p.x += nx * (r - d); p.y += ny * (r - d);
-    if (vn < 0) { p.vx -= nx * vn * 1.12; p.vy -= ny * vn * 1.12; if (vn < -180) { sfx('ld'); p.sq = min(1, -vn / 450); } }
-    if (-(nx * sx + ny * sy) > .5) p.g = .1;
+  let nx = 0, ny = 0, hit = 0;
+  for (let it = 0; it < 7; it++) {
+    if (fld(p.x, p.y) > .5) { p.x -= sx * 1.5; p.y -= sy * 1.5; continue; } // dentro de materia que acaba de solidificarse
+    let ax = 0, ay = 0, n = 0;
+    for (const [cx, cy] of SA) if (fld(p.x + cx * r, p.y + cy * r) > .5) { ax -= cx; ay -= cy; n++; }
+    if (!n) break;
+    const d = hypot(ax, ay); if (d < .01) break;
+    ax /= d; ay /= d; p.x += ax * .55; p.y += ay * .55; nx += ax; ny += ay; hit = 1;
+  }
+  if (hit) {
+    const d = hypot(nx, ny) || 1; nx /= d; ny /= d;
+    const vn = p.vx * nx + p.vy * ny;
+    if (vn < 0) { p.vx -= nx * vn * 1.08; p.vy -= ny * vn * 1.08; if (vn < -180) { sfx('ld'); p.sq = min(1, -vn / 450); } }
+    if (-(nx * sx + ny * sy) > .45) { p.g = .1; p.nx = nx; p.ny = ny; p.vx *= 1 - 1.6 * dt; p.vy *= 1 - 1.6 * dt; }
   }
 };
 
 const die = w => {
   if (st != 'play') return;
-  st = 'over'; ot = 0; why = w; sh = 6; fl = .6;
+  st = 'over'; ot = 0; why = w; sh = 8; fl = .6;
   burst(p.x, p.y, '#fff4d0', 50, 180); burst(p.x, p.y, AX[q].c, 25, 120); sfx('die');
   if (score > S.b) { S.b = score; rec = 1; }
   S.d = max(S.d, depth); save();
@@ -199,10 +332,16 @@ const upd = dt => {
   rv = lp(rv, dir * 3.3, min(1, dt * 14));
   const dth = rv * dt + drag; th += dth; drag = 0;
   q = ((round(th / (PI / 2)) % 4) + 4) % 4;
-  if (q != pq) { pq = q; fl = .5; ban = 1.4; sh = max(sh, 1.5); sfx('sw'); burst(p.x, p.y, AX[q].c, 18, 100); }
+  if (q != pq) { pq = q; fl = .5; ban = 1.4; sh = max(sh, 2); sfx('sw'); burst(p.x, p.y, AX[q].c, 18, 100); }
   const ts = q == 3 ? .7 : 1, dts = dt * ts;
   for (let n = ceil(dts / .004), k = n; k--;) phys(dts / n);
   p.g -= dts; p.sq = max(0, p.sq - dt * 5);
+  // animación de la criatura (en espacio de pantalla)
+  const c_ = cos(th), s_ = sin(th), svx = p.vx * c_ - p.vy * s_;
+  if (abs(svx) > 18) p.f = svx > 0 ? 1 : -1;
+  if (p.g > 0) p.ph += abs(svx) * dt * .16;
+  const ga_ = p.g > 0 ? cl(Math.atan2(p.nx * c_ - p.ny * s_, -(p.nx * s_ + p.ny * c_)), -.7, .7) : 0;
+  p.an = lp(p.an, ga_, min(1, dt * 12));
   if ((jb -= dt) > 0 && p.g > 0) {
     const js = q == 1 ? 375 : 255, gx = sin(th), gy = cos(th), vg = p.vx * gx + p.vy * gy;
     p.vx -= gx * (vg + js); p.vy -= gy * (vg + js); p.g = 0; jb = 0; sfx('jp');
@@ -219,9 +358,9 @@ const upd = dt => {
     e.k = 1; cr++; L = min(100, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
-  // púas
+  // espinas
   for (let j = pj - 1; j <= pj + 1; j++) for (let i = pi - 1; i <= pi + 1; i++)
-    if (tile(i, j) == 6 && i >= 0 && i < CW && hypot(cl(p.x, i * T + 2, i * T + T - 2) - p.x, cl(p.y, j * T + 5, j * T + T) - p.y) < p.r - .5) die('TE PINCHASTE');
+    if (tile(i, j) == 6 && i >= 0 && i < CW && hypot(cl(p.x, i * T + 2, i * T + T - 2) - p.x, cl(p.y, j * T + 5, j * T + T) - p.y) < p.r - 1) die('TE PINCHASTE');
   if (pj > depth) { score += (pj - depth) * 2; depth = pj; }
   // la Sombra cae desde arriba y acelera
   vY += min(120, 27 + depth * .075) * dt; vY = max(vY, p.y - 300);
@@ -230,174 +369,150 @@ const upd = dt => {
   if (L < 25 && (hb -= dt) < 0) { hb = .7; sfx('hb'); }
   if (!rec && S.b > 50 && score > S.b) { rec = 1; ban = 0; sfx('go'); burst(p.x, p.y, '#ffd75e', 40, 130); }
   while (gy < pj + 40) gen();
+  const kc = floor(p.y / CH);
   for (const k of M.keys()) if (k < pj - 60) M.delete(k);
+  for (const k of MT.keys()) if (k < kc - 3) { MT.delete(k); CF.delete(k); for (let n = 0; n < 4; n++) CC.delete(k * 4 + n); }
   camx = lp(camx, p.x, min(1, dt * 8)); camy = lp(camy, p.y, min(1, dt * 8));
   upP(dt); mus(dt);
 };
 
 // ---------- dibujo ----------
-const ws = (x, y) => { const dx = x - round(camx), dy = y - round(camy), c = cos(th), s = sin(th); return [W / 2 + dx * c - dy * s, H / 2 + dx * s + dy * c]; };
-const VR = 25; // radio visible en tiles
-const view = (ox, oy) => { X.translate(W / 2 + ox, H / 2 + oy); X.rotate(th); X.translate(-round(camx), -round(camy)); };
-const spk = (x, y) => { X.beginPath(); for (let s = 0; s < 3; s++) { X.moveTo(x + s * 4, y + T); X.lineTo(x + s * 4 + 2, y + 3 + (s & 1) * 2); X.lineTo(x + s * 4 + 4, y + T); } X.fill(); };
-// íconos de 4x4 de cada axioma (bits por fila): ola, rombo, sol, hoja
-const IC = ['0960', '6996', '6ff6', '1374'];
-const icon = (k, x, y, c) => { for (let r = 0; r < 4; r++) { const b = parseInt(IC[k][r], 16); for (let s = 0; s < 4; s++) if (b >> 3 - s & 1) fr(x + s, y + r, 1, 1, c); } };
+const ws = (x, y) => { const dx = (x - camx) * Z, dy = (y - camy) * Z, c = cos(th), s = sin(th); return [W / 2 + dx * c - dy * s, H / 2 + dx * s + dy * c]; };
+const view = (ox, oy, f = 1) => { X.translate(W / 2 + ox, H / 2 + oy); X.rotate(th); X.scale(Z, Z); X.translate(-camx * f, -camy * f); };
+const VR = 300; // radio visible en px de mundo
 
-const world = () => {
-  const ci = floor(camx / T), cj = floor(camy / T);
-  const bw = mix('#100c24', AX[q].k, .3), bs = mix('#08061a', AX[q].k, .12), bv = mix('#16123a', AX[q].k, .35);
-  fr(0, cj * T - VR * T, CW * T, VR * T * 2, bw);
-  for (let j = cj - VR; j <= cj + VR; j++) for (let i = ci - VR; i <= ci + VR; i++) {
-    const v = tile(i, j), x = i * T, y = j * T, h = hs(i, j), h2 = hs(j, i + 77);
-    if (i < 0 || i >= CW || j < 0) {
-      if (i > -12 && i < CW + 11) { fr(x, y, T, T, '#13102a'); if (h < .3) fr(x + (h * 99 % 9 | 0), y + (h2 * 9 | 0), 3, 2, '#1b1736'); if (h2 < .2) fr(x + 2, y + (h * 8 | 0), 1, 3, '#0d0b1e'); }
-      continue;
-    }
-    if (!v || v > 5) { // muro del fondo: sillares, grietas y runas antiguas
-      const o = j & 1 ? 6 : 0;
-      fr(x, y, T, 1, bs); fr(x + o, y, 1, T, bs);
-      if (h < .3) fr(x + 2, y + 2, T - 4, T - 4, bv); else if (h < .4) fr(x + 1, y + T - 3, T - 2, 2, bs);
-      if (h > .93) { const c = mix('#1a1636', AX[q].c, .25); for (let r = 0; r < 5; r++) for (let s = 0; s < 3; s++) if (hs(i * 7 + s, j * 5 + r) < .5) fr(x + 4 + s * 2, y + 1 + r * 2, 1, 1, c); }
-      if (h2 < .06) { fr(x + 3, y + 4, 1, 3, '#05040b'); fr(x + 4, y + 7, 1, 3); }
-    }
-    if (v == 1) { // roca
-      fr(x, y, T, T, '#1d1934'); fr(x, y + T - 2, T, 2, '#17142c');
-      if (!sol(i, j - 1)) fr(x, y, T, 3, '#2a2550');
-      fr(x + (h * 7 | 0), y + 4 + (h2 * 5 | 0), 3, 1, '#272244'); if (h < .35) fr(x + (h2 * 9 | 0), y + 8, 2, 2, '#120f24');
-    } else if (v > 1 && v < 6) { // bloque de axioma
-      const k = v - 2, a = AX[k];
-      if (k == q) { fr(x, y, T, T, a.k); fr(x + 1, y + 1, T - 2, T - 2, mix(a.k, a.c, .3)); fr(x + 1, y + 1, T - 2, 1, mix(a.c, '#ffffff', .3)); fr(x + 1, y + 1, 1, T - 2); icon(k, x + 4, y + 4, a.c); }
-      else { ga(.35); icon(k, x + 4, y + 4, a.k); ga(1); }
-    } else if (v == 7) { // lámpara de pared
-      const on = q == 2;
-      fr(x + 5, y, 2, 3, '#3a2a14'); fr(x + 3, y + 3, 6, 1, '#5a4020'); fr(x + 3, y + 4, 6, 6, '#2a1d0e'); fr(x + 4, y + 5, 4, 4, on ? '#fff1c0' : '#4a3418'); fr(x + 3, y + 10, 6, 1, '#5a4020');
-      if (on) fr(x + 5, y + 6, 2, 2, '#ffffff');
-    }
+// capas lejanas: columnas, estalactitas y raíces en silueta, con paralaje
+const far = (f, col, sd) => {
+  X.save(); view(0, 0, f); X.fillStyle = col;
+  const g = 70, cx = floor(camx * f / g), cy = floor(camy * f / g);
+  for (let j = cy - 6; j <= cy + 6; j++) for (let i = cx - 6; i <= cx + 6; i++) {
+    const h = hs(i * 7 + sd, j), h2 = hs(j * 3 + sd, i);
+    if (h > .42) continue;
+    const x0 = i * g + h2 * g, y0 = j * g, w = 6 + h2 * 16, hh = 50 + h * 260, up = h2 < .5;
+    X.beginPath(); X.moveTo(x0 - w, y0);
+    for (let n = 0; n <= 10; n++) { const u = n / 10; X.lineTo(x0 - w * (1 - u) * (.7 + .3 * sin(u * 9 + h * 30)) + sin(u * 5 + h2 * 9) * 4, y0 + (up ? -1 : 1) * u * hh); }
+    for (let n = 10; n >= 0; n--) { const u = n / 10; X.lineTo(x0 + w * (1 - u) * (.7 + .3 * sin(u * 7 + h2 * 30)) + sin(u * 5 + h2 * 9) * 4, y0 + (up ? -1 : 1) * u * hh); }
+    X.fill();
   }
-};
-// contornos fluorescentes: lo que importa se lee aunque esté oscuro
-const neon = () => {
-  const ci = floor(camx / T), cj = floor(camy / T), c = AX[q].c, cb = mix(c, '#ffffff', .5);
-  for (let j = cj - VR; j <= cj + VR; j++) for (let i = max(-1, ci - VR); i <= min(CW, ci + VR); i++) {
-    const v = tile(i, j), x = i * T, y = j * T, h = hs(i, j);
-    if (v == 6) { X.fillStyle = '#ff3b5c'; spk(x, y); fr(x + 2, y + 4, 1, 1, '#ffd0d8'); fr(x + 6, y + 6, 1, 1); fr(x + 10, y + 4, 1, 1); continue; }
-    if (v > 1 && v < 6 && v - 2 != q) { // fantasma: sólo esquinas punteadas
-      const a = AX[v - 2].c; ga(.5); X.fillStyle = a;
-      fr(x, y, 3, 1); fr(x, y, 1, 3); fr(x + T - 3, y + T - 1, 3, 1); fr(x + T - 1, y + T - 3, 1, 3); fr(x + T - 3, y, 3, 1); fr(x, y + T - 1, 3, 1);
-      ga(1); continue;
-    }
-    if (!solT(v)) continue;
-    const e = v == 1 ? c : AX[v - 2].c, al = v == 1 ? .6 : 1, up = !sol(i, j - 1);
-    ga(al); X.fillStyle = e;
-    if (up) fr(x, y, T, 1);
-    if (!sol(i, j + 1)) fr(x, y + T - 1, T, 1);
-    if (!sol(i - 1, j)) fr(x, y, 1, T);
-    if (!sol(i + 1, j)) fr(x + T - 1, y, 1, T);
-    // brotes fluorescentes sobre la roca: cambian de forma y color con el axioma
-    if (v == 1 && up && j >= 0) {
-      ga(1);
-      for (let s = 0; s < 3; s++) {
-        const hh = hs(i * 3 + s, j), sx = x + 1 + (hh * 10 | 0), sw = sin(t * 3 + hh * 9);
-        if (hh > .55) continue;
-        if (q == 0) { fr(sx, y - 2 - (hh * 4 | 0), 1, 2 + (hh * 4 | 0), c); fr(sx, y - 3 - (hh * 4 | 0), 1, 1, cb); }
-        else if (q == 1) { if ((t * 2 + hh * 5) % 1 < .5) fr(sx, y - 2, 2, 2, c); fr(sx, y - 1, 2, 1, cb); }
-        else if (q == 2) { fr(sx, y - 1, 1, 1, c); if (hh < .25) fr(sx + (sw > 0), y - 3 - (hh * 8 | 0), 1, 1, cb); }
-        else { fr(sx, y - 3, 1, 3, c); fr(sx + (sw > 0 ? 1 : -1), y - 4, 1, 1, cb); fr(sx + 1, y - 2, 1, 1, c); }
-      }
-    }
-    ga(1);
-  }
-  // la Sombra
-  fr(-120, vY - 1300, CW * T + 240, 1300, '#000000');
-  for (let x = -120; x < CW * T + 120; x += 2) { const w = sin(x * .12 + t * 5) * 4 + sin(x * .035 - t * 2) * 5; fr(x, vY + w - 5, 2, 5, '#2a0a3e'); fr(x, vY + w, 2, 1, '#9a3aff'); if (hs(x, floor(t * 8)) < .05) fr(x, vY + w + 2 + hs(x, 3) * 6, 1, 1, '#c070ff'); }
-  for (const e of E) { // cristales facetados
-    const b = 3 + round(sin(t * 5 + e.ph) * 1.5), x = round(e.x), y = round(e.y);
-    for (let r = -b - 1; r <= b + 1; r++) { const w = b + 1 - abs(r); fr(x - w, y + r, w * 2 + 1, 1, r < 0 ? '#e8fbff' : '#9fd8ff'); }
-    fr(x, y - b, 1, b * 2 + 1, '#ffffff'); fr(x - 1, y - 1, 1, 1, c);
-  }
-  for (const e of P) { ga(e.l / e.m); fr(e.x, e.y, 2, 2, e.c); } ga(1);
+  X.restore();
 };
 
-const hero = (x, y) => {
-  x = round(x); y = round(y);
-  const ct = cos(th), stt = sin(th), vx = p.vx * ct - p.vy * stt, vy = p.vx * stt + p.vy * ct,
-    sq = p.sq, rx = 6 + round(sq * 2), ry = 6 - round(sq * 2), ex = cl(round(vx / 90), -1, 1), ey = cl(round(vy / 120), -1, 1), oy = round(sq * 2);
-  const disc = (r1, r2, f) => { for (let b = -r2; b <= r2; b++) { const w = round(r1 * sqrt(max(0, 1 - b * b / ((r2 + .5) * (r2 + .5))))); fr(x - w, y + b + oy, w * 2 + 1, 1, f(b / r2)); } };
-  // estela
-  ga(.35); fr(x - round(vx / 40) - 1, y - round(vy / 40) + oy - 1, 3, 3, AX[q].c); ga(.2); fr(x - round(vx / 20) - 1, y - round(vy / 20) + oy - 1, 3, 3); ga(1);
-  // antena con brote de luz
-  fr(x + ex, y - ry - 3 + oy, 1, 3, '#241034'); fr(x + ex + 1, y - ry - 5 + oy, 1, 2); fr(x + ex + 1, y - ry - 6 + oy, 2, 2, AX[q].c);
-  disc(rx + 1, ry + 1, () => '#241034');
-  disc(rx, ry, b => b < -.4 ? '#fffbe8' : b < .35 ? '#fff0c4' : b < .75 ? '#ffd27a' : '#ffb04a');
-  fr(x - 3, y - ry + 1 + oy, 3, 1, '#ffffff'); fr(x - 4, y - ry + 2 + oy, 1, 1);
-  const bl = t % 3.2 < .12, e1 = x - 3 + ex, e2 = x + 2 + ex, ye = y - 2 + ey + oy;
-  if (bl) { fr(e1, ye + 1, 2, 1, '#1a0f2e'); fr(e2, ye + 1, 2, 1); }
-  else { fr(e1, ye, 2, 3, '#1a0f2e'); fr(e2, ye, 2, 3); fr(e1, ye, 1, 1, '#ffffff'); fr(e2, ye, 1, 1); }
-  fr(x - 5 + ex, y + 2 + oy, 2, 1, '#ff8ab8'); fr(x + 4 + ex, y + 2 + oy, 2, 1);
-  fr(x - 1 + ex, y + 2 + oy + (p.g > 0 ? 0 : 1), 2, 1, '#8a3a2a');
-};
-
-const compass = (cx, cy) => {
-  ga(.6); for (let k = 0; k < 24; k++) { const a = k * PI / 12; fr(round(cx + sin(a) * 13), round(cy - cos(a) * 13), 1, 1, '#3a3460'); } ga(1);
-  for (let k = 0; k < 4; k++) {
-    const a = k * PI / 2 - th, x = round(cx + sin(a) * 13), y = round(cy - cos(a) * 13), on = k == q;
-    fr(x - (on ? 3 : 2), y - (on ? 3 : 2), on ? 7 : 5, on ? 7 : 5, on ? AX[k].c : AX[k].k); if (on) icon(k, x - 2, y - 2, '#ffffff');
+const cre = (x, y, s, f, an, ph, air, cc, tt) => {
+  X.save(); X.translate(x, y); X.rotate(an); X.scale(s * f, s); X.translate(0, -2);
+  X.lineCap = X.lineJoin = 'round';
+  const E_ = (x_, y_, rx, ry) => { X.beginPath(); X.ellipse(x_, y_, rx, ry, 0, 0, 7); X.fill(); };
+  const run = !air && abs(ph) > 0, sw = sin(tt * 6), fl_ = air ? -2.5 : sin(tt * 2.3) * .6;
+  const leg = (hx_, hy_, a, w, c) => { X.strokeStyle = c; X.lineWidth = w; X.beginPath(); X.moveTo(hx_, hy_); const kx = hx_ + sin(a) * 2.8, ky = hy_ + cos(a) * 2.8; X.lineTo(kx, ky); X.lineTo(kx + sin(a * .4) * 2.4 + .4, ky + 2.4); X.stroke(); };
+  const la = k => air ? (k < 2 ? .9 : -.8) : run ? sin(ph + k * PI / 2 + (k > 1) * .6) * .75 : 0;
+  const ear = (bx, by, tx_, ty_, w, c) => { X.fillStyle = c; X.beginPath(); X.moveTo(bx - w, by); X.quadraticCurveTo(bx - w - 1, (by + ty_) / 2, tx_, ty_); X.quadraticCurveTo(bx + w + 1.5, (by + ty_) / 2 + 1, bx + w, by + .5); X.fill(); };
+  for (let pass = 0; pass < 2; pass++) {
+    const o = pass ? 0 : 1.1, dk = '#170b28', C1 = pass ? '#f7f4ff' : dk, C2 = pass ? '#c9c0ea' : dk;
+    X.fillStyle = C1;
+    // cola esponjosa
+    for (let k = 0; k <= 8; k++) { const u = k / 8; X.beginPath(); X.arc(-5.5 - u * 9, -.5 - u * u * 7 + sin(tt * 5 - u * 3) * u * (air ? 1 : 2), 2.6 - u * 1.3 + o, 0, 7); X.fill(); }
+    // patas del fondo, cuerpo, patas del frente
+    leg(-3.6, 2.6, la(0) + PI * 0, 1.7 + o * 1.6, C2); leg(3.4, 2.6, la(2), 1.7 + o * 1.6, C2);
+    X.fillStyle = C1; E_(0, 0, 6.6 + o, 4.5 + o);
+    leg(-2.6, 3, la(1), 1.8 + o * 1.6, C1); leg(4.4, 3, la(3), 1.8 + o * 1.6, C1);
+    // cabeza, hocico y orejas largas
+    X.fillStyle = C1; E_(6.4, -4, 4.7 + o, 4.3 + o); E_(10, -2.6, 2.5 + o, 1.8 + o);
+    ear(4.6, -7, -2.5 + fl_, -16.5, 1.6 + o, pass ? C2 : dk); ear(6.6, -7.4, .5 + fl_, -16, 1.7 + o, C1);
   }
-  fr(cx, cy - 19, 1, 4, '#ffffff'); fr(cx - 1, cy - 1, 3, 3, '#ffffff');
+  // detalles
+  X.fillStyle = cc; ga(.85); ear(6.6, -7.6, 1 + fl_, -14.2, .7, cc); ga(1);
+  X.fillStyle = '#ddd5f6'; ga(.7); E_(0, 2, 5.4, 2.2); ga(1);
+  const bl = tt % 3.4 < .13;
+  X.fillStyle = '#160b26'; E_(7.8, -4.6, 1.55, bl ? .3 : 2);
+  if (!bl) { X.fillStyle = '#ffffff'; E_(8.3, -5.4, .6, .6); X.fillStyle = cc; ga(.6); E_(7.6, -3.6, .7, .45); ga(1); }
+  X.fillStyle = '#2a1838'; E_(12.3, -2.9, .75, .6);
+  X.fillStyle = '#ff9ac8'; ga(.65); E_(9, -2, 1.2, .7); ga(1);
+  X.fillStyle = cc; X.beginPath(); X.moveTo(3.8, -7.2); X.lineTo(4.6, -6); X.lineTo(3.8, -4.8); X.lineTo(3, -6); X.fill();
+  X.beginPath(); X.arc(-14.5, -7.5 + sin(tt * 5 - 3) * (air ? 1 : 2), 1.3, 0, 7); X.fill();
+  X.restore();
 };
 
 const draw = () => {
   const ax = AX[q], ox = round((rnd() - .5) * sh * 2), oy = round((rnd() - .5) * sh * 2);
-  X.setTransform(1, 0, 0, 1, 0, 0);
-  fr(0, 0, W, H, mix('#05040b', ax.k, .3));
-  X.save(); view(ox, oy); world(); X.restore();
-  // oscuridad
-  const [px, py] = ws(p.x, p.y), ci = floor(camx / T), cj = floor(camy / T), lamps = [];
-  if (q == 2) for (let j = cj - VR; j <= cj + VR; j++) for (const i of [0, CW - 1]) if (tile(i, j) == 7) lamps.push(ws(i * T + 6, j * T + 6));
-  DX.globalCompositeOperation = 'source-over'; DX.clearRect(0, 0, W, H);
-  DX.fillStyle = `rgba(4,2,12,${lp(.93, .62, L / 100)})`; DX.fillRect(0, 0, W, H);
-  DX.globalCompositeOperation = 'destination-out';
-  if (st != 'over') lt(DX, '#ffffff', px + ox, py + oy, 50 + L * 1.4);
-  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(DX, '#ffffff', a + ox, b + oy, 22, .6); }
-  for (const [a, b] of lamps) lt(DX, '#ffffff', a + ox, b + oy, 60);
-  X.drawImage(DC, 0, 0);
-  X.save(); view(ox, oy); neon(); X.restore();
-  // brillos
+  X.setTransform(1, 0, 0, 1, 0, 0); X.imageSmoothingEnabled = true;
+  // niebla de color del axioma
+  const g = X.createRadialGradient(W / 2, H * .5, 0, W / 2, H * .5, W * .7);
+  g.addColorStop(0, mix(ax.c, '#07050f', .74)); g.addColorStop(.55, mix(ax.c, '#06040c', .88)); g.addColorStop(1, '#030208');
+  X.fillStyle = g; X.fillRect(0, 0, W, H);
+  far(.35, mix(ax.c, '#06040c', .8), 1); far(.6, mix(ax.c, '#05030a', .9), 2);
+  // polvo luminoso
   X.globalCompositeOperation = 'lighter';
-  if (st != 'over') { lt(X, '#ffe8b0', px + ox, py + oy, 26 + L * .15, .55); lt(X, ax.c, px + ox, py + oy, 46, .16); }
-  for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 40, .7);
-  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(X, '#9fd8ff', a + ox, b + oy, 16, .5); }
+  for (const d of DM) { const [a, b] = ws(d.x, d.y); ga(.25 + .25 * sin(t * 2 + d.ph)); X.fillStyle = mix(ax.c, '#ffffff', .5); X.fillRect(a, b, d.s * 2, d.s * 2); }
+  ga(1); X.globalCompositeOperation = 'source-over';
+  // escenario
+  X.save(); view(ox, oy);
+  fr(-3000, -4000, 3000 - PX + 1, 9000 + camy * 2, '#030207'); fr(CW * T + PX - 1, -4000, 3000, 9000 + camy * 2); fr(-3000, -4000, 6000, 4000);
+  for (let k = max(0, floor((camy - VR) / CH)); k <= floor((camy + VR) / CH); k++) X.drawImage(chunk(k, q), -PX, k * CH - PAD, FW * C, CH + PAD * 2);
+  // semillas de luz
+  for (const e of E) {
+    const b = 2 + sin(t * 5 + e.ph) * .6;
+    X.fillStyle = '#ffffff'; X.beginPath(); X.arc(e.x, e.y, b, 0, 7); X.fill();
+    X.strokeStyle = mix(ax.c, '#ffffff', .5); X.lineWidth = .7; X.beginPath(); const a = t * 2 + e.ph;
+    for (let n = 0; n < 4; n++) { const aa = a + n * PI / 2; X.moveTo(e.x + cos(aa) * 2.5, e.y + sin(aa) * 2.5); X.lineTo(e.x + cos(aa) * 6, e.y + sin(aa) * 6); } X.stroke();
+  }
+  // la Sombra: masa viva con tentáculos
+  X.fillStyle = '#000000'; X.beginPath(); X.moveTo(-400, vY - 3000);
+  for (let x = -400; x <= CW * T + 400; x += 5) X.lineTo(x, vY + sin(x * .09 + t * 4) * 4 + sin(x * .031 - t * 1.7) * 6 + max(0, sin(x * .23 + t)) ** 6 * 14);
+  X.lineTo(CW * T + 400, vY - 3000); X.fill();
+  X.strokeStyle = '#9a3aff'; X.lineWidth = 1.2; X.stroke();
+  for (const e of P) { ga(e.l / e.m); X.fillStyle = e.c; X.fillRect(e.x - .8, e.y - .8, 1.6, 1.6); } ga(1);
+  X.restore();
+  // luz de la criatura
+  const [px, py] = ws(p.x, p.y), ci = floor(camx / T), cj = floor(camy / T), lamps = [];
+  for (let j = cj - 25; j <= cj + 25; j++) for (const i of [0, CW - 1]) if (tile(i, j) == 7) lamps.push(ws(i * T + 6, j * T + 7));
+  DX.globalCompositeOperation = 'source-over'; DX.clearRect(0, 0, W, H);
+  DX.fillStyle = `rgba(3,2,8,${lp(.9, .5, L / 100)})`; DX.fillRect(0, 0, W, H);
+  DX.globalCompositeOperation = 'destination-out';
+  if (st != 'over') lt(DX, '#ffffff', px + ox, py + oy, (60 + L * 1.6) * Z);
+  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(DX, '#ffffff', a + ox, b + oy, 26 * Z, .5); }
+  if (q == 2) for (const [a, b] of lamps) lt(DX, '#ffffff', a + ox, b + oy, 70 * Z);
+  X.drawImage(DC, 0, 0);
+  X.globalCompositeOperation = 'lighter';
+  if (st != 'over') { lt(X, '#fff0d0', px + ox, py + oy, (18 + L * .1) * Z, .5); lt(X, ax.c, px + ox, py + oy, 40 * Z, .14); }
+  if (q == 2) for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 30 * Z, .8);
+  for (const e of E) { const [a, b] = ws(e.x, e.y); lt(X, '#bfe6ff', a + ox, b + oy, 12 * Z, .6); }
   X.globalCompositeOperation = 'source-over';
-  if (st != 'over') hero(px + ox, py + oy);
-  if (fl > 0) { ga(fl * .4); fr(0, 0, W, H, ax.c); ga(1); }
-  // interfaz
+  if (st == 'play') cre(px + ox, py + oy, Z, p.f, p.an, p.ph, p.g <= 0, ax.c, t);
+  if (fl > 0) { ga(fl * .35); fr(0, 0, W, H, ax.c); ga(1); }
+  // interfaz (en una rejilla de 480x270, a escala 2)
+  X.setTransform(2, 0, 0, 2, 0, 0);
+  const U = W / 2, V = H / 2;
   if (st == 'title') {
-    ga(.55); fr(0, 0, W, H, '#05040b'); ga(1);
+    ga(.5); fr(0, 0, U, V, '#05040b'); ga(1);
     const lw = tx('AXIOMI', -999, 0, '#000', 9);
-    let x = W / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 50 + sin(t * 3 + i) * 3; tx(ch, x, y + 9, '#000000', 9); x += tx(ch, x, y, c, 9) + 9; });
-    txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', W / 2, 118, '#e8e4ff', 2, 1);
-    AX.forEach((a, k) => { const x = 90 + k * 100; fr(x - 4, 141, 8, 8, a.k); icon(k, x - 2, 143, a.c); tx(a.n, x, 154, a.c, 1, 1); });
-    txs('<  >  GIRAR       ESPACIO  SALTAR', W / 2, 180, '#b8b0e0', 1, 1);
-    txs('SOLO LO DEL COLOR DEL AXIOMA ES SOLIDO', W / 2, 192, '#8a84b8', 1, 1);
-    if (t % 1 < .65) txs('PULSA ESPACIO', W / 2, 214, '#ffffff', 2, 1);
-    if (S.b) txs('RECORD ' + S.b + '   PROF ' + S.d + 'M', W / 2, 248, '#ffd75e', 1, 1);
+    let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y + 9, '#000000', 9); x += tx(ch, x, y, c, 9) + 9; });
+    txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', U / 2, 96, '#e8e4ff', 2, 1);
+    X.setTransform(1, 0, 0, 1, 0, 0); X.globalCompositeOperation = 'lighter'; lt(X, ax.c, W / 2, 290, 120, .35); X.globalCompositeOperation = 'source-over';
+    cre(W / 2, 314, 5, 1, 0, t * 9, 0, ax.c, t); X.setTransform(2, 0, 0, 2, 0, 0);
+    AX.forEach((a, k) => { tx(a.n, 90 + k * 100, 176, a.c, 1, 1); });
+    txs('<  >  GIRAR       ESPACIO  SALTAR', U / 2, 196, '#b8b0e0', 1, 1);
+    txs('SOLO LO DEL COLOR DEL AXIOMA ES SOLIDO', U / 2, 208, '#8a84b8', 1, 1);
+    if (t % 1 < .65) txs('PULSA ESPACIO', U / 2, 226, '#ffffff', 2, 1);
+    if (S.b) txs('RECORD ' + S.b + '   PROF ' + S.d + 'M', U / 2, 252, '#ffd75e', 1, 1);
     return;
   }
   fr(8, 8, 96, 9, '#1a1530'); fr(9, 9, round(94 * L / 100), 7, L < 25 && t % .4 < .2 ? '#ff4060' : '#ffe9a8'); fr(9, 9, round(94 * L / 100), 2, '#ffffff');
   txs('LUZ', 110, 10, '#ffe9a8');
-  txs(depth + 'M', W - 8, 8, '#ffffff', 3, 2); txs(score + ' PTS', W - 8, 28, '#9ad8ff', 1, 2);
-  compass(W - 26, H - 26); txs(ax.n, W - 46, H - 29, ax.c, 1, 2);
-  if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, W / 2, 44, ax.c, 4, 1); txs(ax.h, W / 2, 72, '#e8e4ff', 1, 1); ga(1); }
-  if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA RODAR. BAJA.', W / 2, H - 20, '#e8e4ff', 1, 1);
+  txs(depth + 'M', U - 8, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 8, 28, '#9ad8ff', 1, 2);
+  // brújula de axiomas
+  const cx = U - 26, cy = V - 26;
+  for (let k = 0; k < 4; k++) { const a = k * PI / 2 - th, x = round(cx + sin(a) * 13), y = round(cy - cos(a) * 13), on = k == q; fr(x - (on ? 3 : 2), y - (on ? 3 : 2), on ? 7 : 5, on ? 7 : 5, on ? AX[k].c : AX[k].k); }
+  fr(cx, cy - 19, 1, 4, '#ffffff'); fr(cx - 1, cy - 1, 3, 3);
+  txs(ax.n, U - 46, V - 29, ax.c, 1, 2);
+  if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
+  if (st == 'play' && t < 6 && S.n < 4) txs('INCLINA EL MUNDO PARA CORRER. BAJA.', U / 2, V - 20, '#e8e4ff', 1, 1);
   if (st == 'over') {
-    ga(min(.7, ot * 2)); fr(0, 0, W, H, '#05040b'); ga(1);
-    txs('APAGADO', W / 2, 50, '#ff6080', 4, 1);
-    txs(why, W / 2, 86, '#e8e4ff', 1, 1);
-    txs(depth + 'M', W / 2, 106, '#ffffff', 4, 1);
-    txs(score + ' PTS   ' + cr + ' CRISTALES', W / 2, 140, '#9ad8ff', 1, 1);
-    txs(rec ? 'NUEVO RECORD!' : 'RECORD ' + S.b, W / 2, 156, '#ffd75e', 1, 1);
-    if (ot > .4 && t % 1 < .7) txs('ESPACIO: OTRA VEZ', W / 2, 192, '#ffffff', 2, 1);
+    ga(min(.7, ot * 2)); fr(0, 0, U, V, '#05040b'); ga(1);
+    txs('APAGADO', U / 2, 50, '#ff6080', 4, 1);
+    txs(why, U / 2, 86, '#e8e4ff', 1, 1);
+    txs(depth + 'M', U / 2, 106, '#ffffff', 4, 1);
+    txs(score + ' PTS   ' + cr + ' SEMILLAS', U / 2, 140, '#9ad8ff', 1, 1);
+    txs(rec ? 'NUEVO RECORD!' : 'RECORD ' + S.b, U / 2, 156, '#ffd75e', 1, 1);
+    if (ot > .4 && t % 1 < .7) txs('ESPACIO: OTRA VEZ', U / 2, 192, '#ffffff', 2, 1);
   }
 };
 
@@ -413,7 +528,7 @@ onkeydown = e => {
 onkeyup = e => K[e.code] = 0;
 let pd = 0;
 cv.onpointerdown = e => { au(); pd = { x: e.clientX, m: 0 }; };
-onpointermove = e => { if (!pd) return; const dx = (e.clientX - pd.x) * W / cv.clientWidth; pd.x = e.clientX; pd.m += abs(dx); if (st == 'play') drag += dx * .03; };
+onpointermove = e => { if (!pd) return; const dx = (e.clientX - pd.x) * W / cv.clientWidth; pd.x = e.clientX; pd.m += abs(dx); if (st == 'play') drag += dx * .015; };
 onpointerup = () => { if (pd && pd.m < 4) act(); pd = 0; };
 
 // ---------- bucle ----------
@@ -424,7 +539,7 @@ const loop = ts => {
   if (st == 'play') upd(dt);
   else {
     t += dt; ot += dt; upP(dt); mus(dt);
-    if (st == 'title') { th = sin(t * .45) * 2.4; q = pq = ((round(th / (PI / 2)) % 4) + 4) % 4; camy = lp(camy, 60 + t * 9 % 450, .05); }
+    if (st == 'title') { th = sin(t * .45) * 2.4; q = pq = ((round(th / (PI / 2)) % 4) + 4) % 4; camy = lp(camy, 60 + t * 9 % 450, .05); camx = CW * T / 2; }
   }
   sh = max(0, sh - dt * 12); fl = max(0, fl - dt * 2.5); ban -= dt;
   draw();
