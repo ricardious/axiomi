@@ -1,0 +1,9 @@
+{
+  "name": "axiomi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Arcade de mundo giratorio en 32 KB",
+  "scripts": { "build": "node build.mjs" },
+  "devDependencies": { "terser": "^5.36.0" }
+}
