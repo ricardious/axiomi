@@ -156,20 +156,20 @@ const carve = (R, ex, rc, tr, oc) => {
     if (tr) for (const [a, b_] of [[[x, y], m], [m, c]]) for (let k = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; k < n; k++) E.push({ x: lp(a[0], b_[0], k / n), y: lp(a[1], b_[1], k / n), ph: k, s: 1 });
   }
 };
-// mundos geométricos: sala rectangular y pasillos rectos (en L, o en escalera en las ruinas)
-const carveB = (R, ex, hw, hh, tr, sx) => {
+// mundos geométricos (y quietos): sala rectangular y pasillos rectos en L, todos a ras de suelo para poder caminarlos
+const carveB = (R, ex, hw, hh, tr, fy) => {
   const [cx, cy] = R.c;
   if (hh) cap([cx - hw, cy], [cx + hw, cy], hh, hh, 2);
   for (const [x, y, r] of ex) {
     const p = [[x, y]];
-    if (y == R.oy || y == R.oy + RH) p.push([x, cy]);
-    else if (sx && abs(y - cy) > hh * .5) for (let k = 1; k < 4; k++) p.push([lp(x, cx, k / 4), p[p.length - 1][1]], [lp(x, cx, k / 4), lp(y, cy, k / 3)]);
+    // pozo: baja hasta el suelo de la sala y sigue a ras de suelo (fy: altura del suelo)
+    if (y == R.oy || y == R.oy + RH) { p.push([x, fy ? fy - r : cy]); if (fy) p.push([cx, fy - r]); }
     else p.push([cx, y]);
     p.push([cx, cy]); EX.push([x, y]); R.sd.push(p[1]);
     for (let k = 1; k < p.length; k++) {
       const a = p[k - 1], b_ = p[k];
       cap(a, b_, r, r, 2); R.ax.push([...a, ...b_]);
-      if (tr) for (let z = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; z < n; z++) E.push({ x: lp(a[0], b_[0], z / n), y: lp(a[1], b_[1], z / n), ph: z, s: 1 });
+      if (tr) for (let z = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; z < n; z++) E.push({ x: lp(a[0], b_[0], z / n), y: lp(a[1], b_[1], z / n) + (fy ? r - 9 : 0), ph: z, s: 1 }); // a ras de suelo si no gira
     }
   }
 };
@@ -186,7 +186,9 @@ const gen = () => {
     Rs.push(R); RM.set(ry * 8 + i, R);
   }
   const c = pc, c2 = ry && rnd() < .8 ? cl(c + pk([-3, -2, -1, -1, 1, 1, 2, 3]), 0, NC - 1) : c, lo = min(c, c2), hi = max(c, c2), hb_ = [];
-  for (let i = lo; i < hi; i++) hb_[i] = [(i + 1) * RW, oy + rr(big ? 62 : 52, RH - (big ? 62 : 52)), big ? rr(34, 42) : rr(19, 27)];
+  // en los mundos quietos (geométricos) los pasillos van pegados al suelo, a una altura que se puede subir de un salto
+  const fx = bi > 3;
+  for (let i = lo; i < hi; i++) { const r = fx ? bi == 4 ? rr(19, 27) : rr(24, 30) : big ? rr(34, 42) : rr(19, 27); hb_[i] = [(i + 1) * RW, fx ? oy + rr(140, 150) - r : oy + rr(big ? 62 : 52, RH - (big ? 62 : 52)), r]; }
   const dx = c2 * RW + rr(60, RW - 60), dr = bi == 3 ? rr(28, 34) : rr(18, 25);
   if (!ry) Rs[c].c = [c * RW + RW / 2, 76];
   for (let i = lo; i <= hi; i++) {
@@ -197,8 +199,8 @@ const gen = () => {
     if (i < hi) ex.push(hb_[i]);
     if (big && ry) R.c = [R.ox + RW / 2 + rr(-30, 30), oy + RH / 2 + rr(-10, 10)];
     const rc = !ry ? 48 : bi == 1 ? rr(56, 66) : bi == 3 ? rr(70, 78) : rr(24, 46), vx = e => e[1] == oy || e[1] == oy + RH, gb = bi > 3,
-      hh = bi == 4 ? rr(26, 40) : rr(52, 62), hw = rr(bi == 4 ? 10 : 4, (bi == 4 ? 74 : 92) - hh);
-    if (gb) { R.c = [R.ox + RW / 2 + rr(-1, 1) * (bi == 4 ? 40 : 24), oy + RH / 2 + rr(-1, 1) * (bi == 4 ? 12 : 8)]; carveB(R, ex, hw, hh, ry, bi == 4); }
+      cf = oy + rr(132, 150), hh = bi == 4 ? rr(26, 40) : min(rr(52, 62), (cf - oy - 10) / 2), hw = rr(bi == 4 ? 10 : 4, (bi == 4 ? 74 : 92) - hh);
+    if (gb) { R.c = [R.ox + RW / 2 + rr(-1, 1) * (bi == 4 ? 40 : 24), cf - hh]; carveB(R, ex, hw, hh, ry, cf); }
     else carve(R, ex, rc, ry, bi == 2);
     if (bi == 4) for (let n = 10, put = 0; n-- && put < 3;) { // columnas rotas sobre el suelo de la sala
       const w = ri(2, 3) * 4, x = floor(rr(R.c[0] - hw - hh + 6, R.c[0] + hw + hh - 6 - w) / 4) * 4, yb = floor((R.c[1] + hh) / 4) * 4, y = yb - ri(3, 9) * 4;
@@ -242,14 +244,14 @@ const gen = () => {
   WP.push([dx, oy + RH]);
   // cuevas laterales sin salida, con semillas y a veces una lámpara
   if (ry) for (const i of [lo - 1, hi + 1]) if (i >= 0 && i < NC && rnd() < .2) {
-    const R = Rs[i], b = [i < lo ? lo * RW : i * RW, oy + rr(52, RH - 52), rr(17, 22)];
+    const R = Rs[i], r = rr(17, 22), b = [i < lo ? lo * RW : i * RW, bi > 3 ? oy + rr(132, 144) - r : oy + rr(52, RH - 52), r];
     R.k = 2; R.lamp = rnd() < .65;
-    if (bi > 3) { R.c[1] = b[1]; carveB(R, [b], rr(6, 16), rr(16, 24)); carveB(Rs[i < lo ? lo : hi], [b], 0, 0); } else { carve(R, [b], rr(22, 34)); carve(Rs[i < lo ? lo : hi], [b], 22); }
+    if (bi > 3) { R.c[1] = b[1] + r - 24; carveB(R, [b], rr(6, 16), 24, 0, b[1] + r); carveB(Rs[i < lo ? lo : hi], [b], 0, 0, 0, b[1] + r); } else { carve(R, [b], rr(22, 34)); carve(Rs[i < lo ? lo : hi], [b], 22); }
     for (let n = 3; n--;) E.push({ x: R.c[0] + rr(-12, 12), y: R.c[1] + rr(-10, 10), ph: rnd() * 6 });
   }
   // barreras de color en las salidas, cada una con su cristal (la llave) justo antes, en el túnel
   const pl = ry > 1 ? .35 + d * .4 : 0, sg = c2 > c ? 1 : -1;
-  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push([k, x - 5, y - r - 18, x + 5, y + r + 18]); CY.push(kp(Rs[sg > 0 ? i : i + 1], x, y, k)); }
+  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push([k, x - 5, y - r - 18, x + 5, y + r + 18]); const cc = kp(Rs[sg > 0 ? i : i + 1], x, y, k); if (fx) cc[1] += r - 12; CY.push(cc); }
   if (ry == 1 || ry > 1 && rnd() < pl) { const k = ry == 1 ? ri(1, 3) : ri(0, 3); CO.push([k, dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]); CY.push(kp(Rs[c2], dx, oy + RH, k)); }
   pc = c2; pdx = dx; pdr = dr;
 };
@@ -480,9 +482,15 @@ const near = f => { const rx = floor(p.x / RW), ry = floor(p.y / RH); for (let j
 
 const upd = dt => {
   t += dt;
-  const dir = (K.ArrowRight || K.KeyD ? 1 : 0) - (K.ArrowLeft || K.KeyA ? 1 : 0);
-  rv = lp(rv, dir * 3.3, min(1, dt * 14));
-  const dth = rv * dt + drag; th += dth; drag = 0;
+  let dir = (K.ArrowRight || K.KeyD ? 1 : 0) - (K.ArrowLeft || K.KeyA ? 1 : 0);
+  // mundos quietos (ruinas y cubos): el mundo vuelve a su sitio y no gira; ← → caminan (en táctil, arrastrar y mantener)
+  const fz = st == 'play' && BI(max(0, floor(p.y / RH))) > 3, th0 = th;
+  if (fz) {
+    if (pd && pd.m > 4 && abs(pd.x - pd.x0) > 12) dir = pd.x > pd.x0 ? 1 : -1;
+    rv = 0; drag = 0; th = lp(th, round(th / (2 * PI)) * 2 * PI, min(1, dt * 5));
+    p.vx = lp(p.vx, dir * 165, min(1, dt * (p.g > 0 ? 14 : 5)));
+  } else { rv = lp(rv, dir * 3.3, min(1, dt * 14)); th += rv * dt + drag; drag = 0; }
+  const dth = th - th0;
   ca = lp(ca, th, min(1, dt * 7)); // la cámara sigue el giro con suavidad (marea menos)
   const ts = q == 3 ? .7 : 1, dts = dt * ts;
   for (let n = ceil(dts / .004), k = n; k--;) phys(dts / n);
@@ -516,7 +524,7 @@ const upd = dt => {
   const pj = floor(p.y / 12);
   if (pj > depth) { score += (pj - depth) * 2; depth = pj; }
   // la Sombra cae desde arriba y acelera
-  vY += min(85, 20 + depth * .05) * dt; vY = max(vY, p.y - 320);
+  vY += min(85, 20 + depth * .05) * (fz ? .6 : 1) * dt; vY = max(vY, p.y - 320);
   if (p.y - p.r < vY) die('LA SOMBRA TE ALCANZO');
   if (L <= 0) { L = 0; die('TE QUEDASTE SIN LUZ'); }
   if (L < 25 && (hb -= dt) < 0) { hb = .7; sfx('hb'); }
@@ -706,7 +714,7 @@ const draw = () => {
   // tu color actual
   X.save(); X.shadowColor = ax.c; X.shadowBlur = 12; X.fillStyle = ax.c; X.beginPath(); X.moveTo(U - 20, V - 36); X.lineTo(U - 12, V - 23); X.lineTo(U - 20, V - 10); X.lineTo(U - 28, V - 23); X.fill(); X.restore();
   txs('TU COLOR', U - 34, V - 31, '#8a84b8', 1, 2); txs(ax.n, U - 34, V - 20, ax.c, 1, 2);
-  if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); ga(1); }
+  if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); txs(pbi > 3 ? 'EL MUNDO NO GIRA:  < >  CAMINAR' : '< >  GIRA EL MUNDO', U / 2, 140, '#e8e4ff', 1.4, 1); ga(1); }
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
   if (st == 'play' && t > 3 && t < 14 && S.n < 5) { txs('TOCA UN CRISTAL: TU LUZ TOMA SU COLOR', U / 2, V - 58, '#e8e4ff', 1, 1); txs('LAS BARRERAS DE TU COLOR SE ABREN', U / 2, V - 46, '#e8e4ff', 1, 1); }
   if (st == 'over') {
@@ -731,7 +739,7 @@ onkeydown = e => {
 };
 onkeyup = e => K[e.code] = 0;
 let pd = 0;
-cv.onpointerdown = e => { au(); pd = { x: e.clientX, m: 0 }; };
+cv.onpointerdown = e => { au(); pd = { x: e.clientX, x0: e.clientX, m: 0 }; };
 onpointermove = e => { if (!pd) return; const dx = (e.clientX - pd.x) * W / cv.clientWidth; pd.x = e.clientX; pd.m += abs(dx); if (st == 'play') drag += dx * .015; };
 onpointerup = () => { if (pd && pd.m < 4) act(); pd = 0; };
 

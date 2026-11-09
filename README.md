@@ -13,6 +13,7 @@ El juego se ve dentro de un monitor CRT retro sobre un escritorio de noche (todo
 | Acción | Teclado | Ratón / táctil |
 |---|---|---|
 | Girar el mundo (gravedad) | `←` `→` o `A` `D` | arrastrar a los lados |
+| Caminar (en RUINAS y CUBOS) | `←` `→` o `A` `D` | arrastrar y mantener |
 | Saltar | `Espacio`, `↑` o `W` | toque |
 | Sonido on/off | `M` | — |
 | Marco de la PC on/off | `F` | — (en pantallas verticales se juega sin marco) |
@@ -30,7 +31,7 @@ Funcionan como **llave y puerta**: toca un cristal y tu luz toma su color. **Las
 
 ## Biomas
 
-Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túneles de roca) y **geométricos** (salas cuadradas y pasillos rectos): grutas → ruinas → bosque hongo → cubos → geoda → abismo.
+Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túneles de roca) y **geométricos** (salas cuadradas y pasillos rectos). En los geométricos **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse: grutas → ruinas → bosque hongo → cubos → geoda → abismo.
 
 | Bioma | Cómo es |
 |---|---|
@@ -38,8 +39,8 @@ Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túne
 | **BOSQUE HONGO** | cavernas abiertas con hongos gigantes que sirven de plataforma, esporas y lianas |
 | **GEODA** | cámaras de paredes facetadas con cristales que brotan de los muros |
 | **ABISMO** | un vacío enorme con islas flotantes (algunas de color) por el que caes |
-| **RUINAS** | templo de ladrillo: salas rectangulares, pasillos rectos y escaleras, columnas rotas y arcadas al fondo |
-| **CUBOS** | grandes salas cuadradas de losetas con bloques flotantes (algunos de color) |
+| **RUINAS** | *(no gira)* templo de ladrillo: salas rectangulares, pasillos rectos, columnas rotas que hay que saltar y arcadas al fondo |
+| **CUBOS** | *(no gira)* grandes salas cuadradas de losetas con bloques flotantes (algunos de color) |
 
 ## Cómo se juega
 
@@ -53,7 +54,7 @@ Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túne
 
 ## Reglas del reto
 
-- **≤ 32 KB:** el juego completo es un único `index.html` (~23 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
+- **≤ 32 KB:** el juego completo es un único `index.html` (~24 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
 - **Código propio:** JavaScript puro con Canvas 2D y Web Audio. Sin librerías, frameworks ni motores.
 - **Cero assets:** el pixel art (cuevas, criatura, flora), la luz tramada, la tipografía vectorial, los efectos y la música generativa se crean con código.
 
