@@ -1,6 +1,6 @@
 # AXIOMI
 
-Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Girar el mundo cambia hacia dónde cae la gravedad; con botones eliges uno de cuatro **axiomas** (colores), cada uno con sus propias reglas y música.
+Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Girar el mundo cambia hacia dónde cae la gravedad; tocar un **cristal** tiñe tu luz de su color y te deja atravesar las barreras de ese color.
 
 **Jugar:** https://ricardious.github.io/axiomi/
 
@@ -10,19 +10,18 @@ Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña c
 |---|---|---|
 | Girar el mundo (gravedad) | `←` `→` o `A` `D` | arrastrar a los lados |
 | Saltar | `Espacio`, `↑` o `W` | toque |
-| Cambiar de color (axioma) | `1` `2` `3` `4`, o `Q` / `E` | botones de color (abajo a la derecha) |
 | Sonido on/off | `M` | — |
 
-## Los cuatro axiomas
+## Cristales y barreras de color
 
-Eliges el axioma con su botón. **Solo los bloques de tu color son sólidos**; los demás se vuelven fantasma y los atraviesas.
+Funcionan como **llave y puerta**: toca un cristal y tu luz toma su color. **Las barreras e islas de tu color se vuelven fantasma** y las atraviesas; las de los otros colores son sólidas. Cada barrera tiene su cristal justo antes, en el camino. Cada color da además un efecto:
 
-| Tecla | Axioma | Regla |
-|---|---|---|
-| `1` | **FLUJO** (cian) | lo cian es sólido |
-| `2` | **PULSO** (magenta) | lo magenta es sólido; salto fuerte |
-| `3` | **BRASA** (ámbar) | lo ámbar es sólido; las lámparas recargan tu luz |
-| `4` | **RAÍZ** (verde) | lo verde es sólido; el tiempo se frena, pero la luz se gasta más |
+| Color | Efecto |
+|---|---|
+| **CIAN** | ninguno (con él empiezas) |
+| **ROSA** | salto fuerte |
+| **ÁMBAR** | gastas menos luz |
+| **VERDE** | el tiempo se frena |
 
 ## Biomas
 
@@ -39,10 +38,10 @@ Cada ~70 m el pozo cambia de escenario:
 
 - **Sigue las chispas y la flecha**: marcan el camino.
 - **Desciende** lo más hondo que puedas. El camino baja por pozos y corre por túneles hacia los lados: inclina el mundo para que la gravedad te lleve por ellos.
-- **Tapones e islas de color** cierran el paso: atraviésalos en un axioma en el que sean fantasma.
+- **Barreras de color** cierran el paso: toca el cristal de su color para abrirlas.
 - **Cuevas laterales** sin salida guardan semillas y lámparas.
 - **La Sombra** cae desde arriba y acelera con la profundidad.
-- **Tu luz** se gasta sin parar, más al girar. Recógela en los cristales o en las lámparas (solo en BRASA).
+- **Tu luz** se gasta sin parar, más al girar. Recógela en los cristales o en las lámparas.
 - **Púas** rojas: tocarlas te apaga.
 
 ## Reglas del reto

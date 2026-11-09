@@ -58,10 +58,10 @@ const save = () => { try { localStorage.axiomi = JSON.stringify(S); } catch (e) 
 // ---------- los cuatro axiomas ----------
 // cada orientación del mundo es un estado: sólo los bloques de su color son sólidos
 const AX = [
-  { n: 'FLUJO', c: '#4ff0ff', k: '#0f4a5e', h: 'LO CIAN ES SOLIDO' },
-  { n: 'PULSO', c: '#ff4fd8', k: '#5a1050', h: 'LO MAGENTA ES SOLIDO - SALTO FUERTE' },
-  { n: 'BRASA', c: '#ffb347', k: '#5e3410', h: 'LO AMBAR ES SOLIDO - LAS LAMPARAS CARGAN' },
-  { n: 'RAIZ', c: '#7dff5a', k: '#245a10', h: 'LO VERDE ES SOLIDO - EL TIEMPO SE FRENA' }
+  { n: 'CIAN', c: '#4ff0ff', k: '#0f4a5e', h: 'ATRAVIESAS LO CIAN' },
+  { n: 'ROSA', c: '#ff4fd8', k: '#5a1050', h: 'ATRAVIESAS LO ROSA - SALTO FUERTE' },
+  { n: 'AMBAR', c: '#ffb347', k: '#5e3410', h: 'ATRAVIESAS LO AMBAR - GASTAS MENOS LUZ' },
+  { n: 'VERDE', c: '#7dff5a', k: '#245a10', h: 'ATRAVIESAS LO VERDE - EL TIEMPO SE FRENA' }
 ];
 
 // ---------- audio ----------
@@ -128,7 +128,7 @@ const mus = dt => {
 // materia: 0 aire · 1 roca · 2..5 materia del axioma 0..3
 let st = 'title', t = 0, th = 0, ca = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
   vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
-let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0;
+let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], CY = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0;
 // biomas: cada 5 filas de salas el pozo cambia de escenario
 const BN = ['GRUTAS', 'BOSQUE HONGO', 'GEODA', 'ABISMO'], BI = ry => ry < 5 ? 0 : (1 + floor((ry - 5) / 5)) % 4;
 const room = (i, j) => i < 0 || i >= NC ? 0 : RM.get(j * 8 + i);
@@ -187,7 +187,7 @@ const gen = () => {
     }
     for (const m of [...R.sd, R.c]) if (ry && rnd() < .3) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
     // islas de materia de color dentro de las cámaras
-    if (ry > 1 && rnd() < .35 + d * .4) { const a = rnd() * 7, rb = rr(9, 17), x = R.c[0] + cos(a) * rr(8, 36), y = R.c[1] + sin(a) * rr(8, 26); CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
+    if (ry > 1 && rnd() < .35 + d * .4) { const a = rnd() * 7, rb = rr(7, 13), o = rb + rr(12, 26), x = R.c[0] + cos(a) * o, y = R.c[1] + sin(a) * o; CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
   }
   // camino de puntos (lo usa el bot de pruebas)
   for (let i = c, s = c2 > c ? 1 : -1; ; i += s) { WP.push(Rs[i].c); if (i == c2) break; WP.push(hb_[s > 0 ? i : i - 1]); }
@@ -198,10 +198,10 @@ const gen = () => {
     R.k = 2; R.lamp = rnd() < .65; carve(R, [b], rr(22, 34)); carve(Rs[i < lo ? lo : hi], [b], 22);
     for (let n = 3; n--;) E.push({ x: R.c[0] + rr(-12, 12), y: R.c[1] + rr(-10, 10), ph: rnd() * 6 });
   }
-  // tapones de color en las salidas: sólo los atraviesas en un axioma en el que sean fantasma
-  const pl = ry > 1 ? .35 + d * .4 : 0;
-  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i]; CO.push([ri(0, 3), x - 5, y - r - 18, x + 5, y + r + 18]); }
-  if (ry > 1 && rnd() < pl) CO.push([ri(0, 3), dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]);
+  // barreras de color en las salidas, cada una con su cristal (la llave) justo antes, en el túnel
+  const pl = ry > 1 ? .35 + d * .4 : 0, sg = c2 > c ? 1 : -1;
+  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push([k, x - 5, y - r - 18, x + 5, y + r + 18]); CY.push([x - sg * 42, y, k]); }
+  if (ry == 1 || ry > 1 && rnd() < pl) { const k = ry == 1 ? ri(1, 3) : ri(0, 3); CO.push([k, dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]); CY.push([dx, oy + RH - 42, k]); }
   pc = c2; pdx = dx; pdr = dr;
 };
 
@@ -259,7 +259,7 @@ const mat = (x, y) => {
   const R = room(floor(x / RW), floor(y / RH));
   return R ? (R.m || mapR(R))[(y - R.oy) * RW + x - R.ox] : 1;
 };
-const sol = (x, y) => { const v = mat(x, y); return v == 1 || v == 6 || v == q + 2; };
+const sol = (x, y) => { const v = mat(x, y); return v == 1 || v == 6 || v > 1 && v < 6 && v != q + 2; }; // tu color se atraviesa; los demás son sólidos
 
 // ---------- pixel art de cada sala (una imagen por axioma) ----------
 const PD = 5, MG_ = 6; // cada imagen invade 5 px de sus vecinas (sin costuras al girar); se analizan 6 px más
@@ -283,7 +283,7 @@ const rend = (R, qq) => {
   const w = RW + PD * 2, h = RH + PD * 2, [cn, x] = mk(w, h), id = x.createImageData(w, h), b = new Uint32Array(id.data.buffer);
   const ac = AX[qq].c, ox = R.ox - PD, oy = R.oy - PD, pw = w + MG_ * 2, ph_ = h + MG_ * 2, mv = pad(R), cs = CSs, dd = DDs;
   // clases: 0 aire · 1 roca · 2 materia sólida · 3 materia fantasma · 4 hongo/cristal
-  for (let n = 0; n < pw * ph_; n++) { const v = mv[n], c = v == 6 ? 4 : v < 2 ? v : v == qq + 2 ? 2 : 3; cs[n] = c; dd[n] = c == 0 || c == 3 ? 0 : 9; }
+  for (let n = 0; n < pw * ph_; n++) { const v = mv[n], c = v == 6 ? 4 : v < 2 ? v : v == qq + 2 ? 3 : 2; cs[n] = c; dd[n] = c == 0 || c == 3 ? 0 : 9; }
   // distancia de cada píxel de roca al hueco más cercano (dos pasadas): borde de luz y degradado
   for (let j = 1; j < ph_; j++) for (let i = 1; i < pw; i++) { const n = j * pw + i; dd[n] = min(dd[n], dd[n - 1] + 1, dd[n - pw] + 1); }
   for (let j = ph_ - 2; j >= 0; j--) for (let i = pw - 2; i >= 0; i--) { const n = j * pw + i; dd[n] = min(dd[n], dd[n + 1] + 1, dd[n + pw] + 1); }
@@ -335,7 +335,7 @@ const rend = (R, qq) => {
     for (let k = -hw; k <= hw; k++) set(sx + nx * s - ny * k - ox, sy + ny * s + nx * k - oy, SPK[s < 1 ? 0 : abs(k) == hw && hw ? 1 : s < 6 ? 2 : s < 9 ? 3 : 4]);
   }
   // lámparas: sólo se encienden en BRASA
-  const on = qq == 2, LC_ = [u32('#040309'), u32(on ? '#ffe6a8' : '#4a3418'), u32('#ffffff')];
+  const on = 1, LC_ = [u32('#040309'), u32(on ? '#ffe6a8' : '#4a3418'), u32('#ffffff')];
   for (const [lx, ly] of R.lp) {
     const i = lx - ox, j = ly - oy;
     for (let k = 0; k < 3; k++) set(i, j + k, LC_[0]);
@@ -372,7 +372,7 @@ const bgl = (l, f, B) => {
 };
 
 const reset = () => {
-  RM.clear(); CP = []; CO = []; EX = []; WP = []; FL = []; E = []; P = []; gr = 0; pc = 2; wi = 0;
+  RM.clear(); CP = []; CO = []; EX = []; WP = []; FL = []; CY = []; E = []; P = []; gr = 0; pc = 2; wi = 0;
   while (gr < 5) gen();
   const R0 = room(2, 0);
   p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
@@ -419,11 +419,6 @@ const die = w => {
 };
 const near = f => { const rx = floor(p.x / RW), ry = floor(p.y / RH); for (let j = ry - 1; j <= ry + 1; j++) for (let i = rx - 1; i <= rx + 1; i++) { const R = room(i, j); if (R && R.m) f(R); } };
 
-// el axioma (color) se elige con botones; girar sólo cambia la gravedad
-const sel = k => {
-  k = (k % 4 + 4) % 4; if (st != 'play' || k == q) return;
-  q = pq = k; L -= 1.5; fl = .2; ban = 1.1; sfx('sw'); burst(p.x, p.y, AX[q].c, 14, 90);
-};
 const upd = dt => {
   t += dt;
   const dir = (K.ArrowRight || K.KeyD ? 1 : 0) - (K.ArrowLeft || K.KeyA ? 1 : 0);
@@ -442,10 +437,12 @@ const upd = dt => {
     burst(p.x + gx * 5, p.y + gy * 5, '#fff4d0', 6, 45);
   }
   // la luz: se gasta siempre, más al girar y más cuanto más hondo
-  L -= dt * (3.8 + abs(dth / dt) * 1.2) * (1 + depth / 360) * (q == 3 ? 1.4 : 1);
+  L -= dt * (3.8 + abs(dth / dt) * 1.2) * (1 + depth / 360) * (q == 2 ? .6 : 1);
+  // cristales: al tocarlos tu luz toma su color
+  for (const [x, y, k] of CY) if (k != q && hypot(x - p.x, y - p.y) < p.r + 16) { q = pq = k; fl = .25; ban = 2; sfx('sw'); burst(x, y, AX[k].c, 20, 110); }
   near(R => {
     for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) die('TE PINCHASTE');
-    if (q == 2) for (const [x, y] of R.lp) if (hypot(x - p.x, y + 6 - p.y) < 52) {
+    for (const [x, y] of R.lp) if (hypot(x - p.x, y + 6 - p.y) < 52) {
       L = min(100, L + 36 * dt); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
@@ -469,7 +466,7 @@ const upd = dt => {
   if (BI(max(0, pr)) != pbi) { pbi = BI(max(0, pr)); bn = 2.6; sfx('go'); }
   while (gr <= pr + 3) gen();
   for (const [k, R] of RM) if (R.ry < pr - 3) RM.delete(k);
-  const top = (pr - 3) * RH; CP = CP.filter(c => c[9] > top); CO = CO.filter(c => c[4] > top); FL = FL.filter(f => f[3] > top); EX = EX.filter(e => e[1] > top - 60);
+  const top = (pr - 3) * RH; CP = CP.filter(c => c[9] > top); CO = CO.filter(c => c[4] > top); FL = FL.filter(f => f[3] > top); CY = CY.filter(c => c[1] > top); EX = EX.filter(e => e[1] > top - 60);
   camx = lp(camx, p.x, min(1, dt * 8)); camy = lp(camy, p.y, min(1, dt * 8));
   upP(dt); mus(dt);
 };
@@ -569,6 +566,14 @@ const draw = () => {
     for (const [x, y] of R.lp) lamps.push(ws(x, y + 6));
   }
   const VE = E.filter(e => abs(e.x - camx) < VR && abs(e.y - camy) < VR);
+  // cristales (llaves de color): rombos que flotan; el de tu color se ve apagado
+  const VC = CY.filter(c => abs(c[0] - camx) < VR && abs(c[1] - camy) < VR);
+  for (const [x, y, k] of VC) {
+    const c = AX[k].c, cx = round(x), cy = round(y + sin(t * 3 + x) * 2);
+    ga(k == q ? .35 : 1);
+    for (let j = -7; j <= 7; j++) { const hw = round((7 - abs(j)) * .6); fr(cx - hw, cy + j, hw * 2 + 1, 1, j < 0 ? mix(c, '#ffffff', .4) : c); fr(cx - hw, cy + j, 1, 1, '#ffffff'); }
+    ga(1);
+  }
   // semillas de luz
   for (const e of VE) {
     const ex = round(e.x), ey = round(e.y), a = t * 3 + e.ph, rd = 4 + round(sin(t * 5 + e.ph));
@@ -588,15 +593,17 @@ const draw = () => {
   const [px, py] = ws(p.x, p.y), Ls = [];
   if (st != 'over') Ls.push([px + ox, py + oy, 60 + L * 1.6, 1.8]);
   for (const e of VE) if (!e.s) { const [a, b] = ws(e.x, e.y); Ls.push([a + ox, b + oy, 26, .8]); }
-  if (q == 2) for (const [a, b] of lamps) Ls.push([a + ox, b + oy, 75, 1.8]);
+  for (const [x, y, k] of VC) if (k != q) { const [a, b] = ws(x, y); Ls.push([a + ox, b + oy, 44, 1.2]); }
+  for (const [a, b] of lamps) Ls.push([a + ox, b + oy, 75, 1.8]);
   dark(Ls, lp(.93, .55, L / 100));
   X.globalCompositeOperation = 'lighter';
   if (st != 'over') { lt(X, '#fff0d0', px + ox, py + oy, 18 + L * .1, .45); lt(X, ax.c, px + ox, py + oy, 40, .14); }
-  if (q == 2) for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 30, .8);
+  for (const [a, b] of lamps) lt(X, '#ffb347', a + ox, b + oy, 30, .8);
   for (const e of VE) { const [a, b] = ws(e.x, e.y); lt(X, e.s ? ax.c : '#bfe6ff', a + ox, b + oy, e.s ? 6 : 12, e.s ? .5 : .6); }
   // los obstáculos brillan por encima de la oscuridad
   for (const R of VS) for (const [x, y, nx, ny] of R.sp) { const [a, b] = ws(x + nx * 6, y + ny * 6); lt(X, '#ff2e55', a + ox, b + oy, 9, .55); }
-  for (const c of CO) if (c[0] == q && abs(c[1] - camx) < VR && abs(c[2] - camy) < VR) { const [a, b] = ws((c[1] + c[3]) / 2, (c[2] + c[4]) / 2); lt(X, ax.c, a + ox, b + oy, max(c[3] - c[1], c[4] - c[2]) * .75, .3 + .12 * sin(t * 6)); }
+  for (const [x, y, k] of VC) if (k != q) { const [a, b] = ws(x, y); lt(X, AX[k].c, a + ox, b + oy, 24, .6 + .25 * sin(t * 5)); }
+  for (const c of CO) if (c[0] != q && abs(c[1] - camx) < VR && abs(c[2] - camy) < VR) { const [a, b] = ws((c[1] + c[3]) / 2, (c[2] + c[4]) / 2); lt(X, AX[c[0]].c, a + ox, b + oy, max(c[3] - c[1], c[4] - c[2]) * .75, .3 + .12 * sin(t * 6)); }
   X.globalCompositeOperation = 'source-over';
   if (st == 'play') { spr(p.ph, p.g <= 0, ax.c, t); X.save(); X.translate(round(px + ox), round(py + oy)); X.rotate(th - ca); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
   if (st == 'play' && WP[wi]) {
@@ -622,10 +629,9 @@ const draw = () => {
     const lw = tx('AXIOMI', -999, 0, '#000', 9);
     let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y, c, 9); x += 6.4 * .95 * 9; });
     txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', U / 2, 96, '#e8e4ff', 2, 1);
-    AX.forEach((a, k) => { tx(k + 1 + ' ' + a.n, 90 + k * 100, 176, a.c, 1, 1); });
-    txs('<  >  GIRAR EL MUNDO      ESPACIO  SALTAR', U / 2, 194, '#b8b0e0', 1, 1);
-    txs('1 2 3 4  O  Q E  CAMBIAR DE COLOR', U / 2, 206, '#b8b0e0', 1, 1);
-    txs('SOLO LO DE TU COLOR ES SOLIDO', U / 2, 218, '#8a84b8', 1, 1);
+    txs('<  >  GIRAR EL MUNDO      ESPACIO  SALTAR', U / 2, 182, '#b8b0e0', 1, 1);
+    txs('TOCA UN CRISTAL: TU LUZ TOMA SU COLOR', U / 2, 198, '#e8e4ff', 1, 1);
+    txs('Y ATRAVIESAS LAS BARRERAS DE ESE COLOR', U / 2, 210, '#e8e4ff', 1, 1);
     if (t % 1 < .65) txs('PULSA ESPACIO', U / 2, 236, '#ffffff', 2, 1);
     if (S.b) txs('RECORD ' + S.b + '   PROF ' + S.d + 'M', U / 2, 258, '#ffd75e', 1, 1);
     return;
@@ -636,18 +642,12 @@ const draw = () => {
   X.save(); X.shadowColor = lc; X.shadowBlur = 10; X.strokeStyle = lc; X.beginPath(); X.moveTo(12, 13); X.lineTo(12 + 96 * L / 100, 13); X.stroke(); X.restore();
   txs('LUZ', 116, 10, lc);
   txs(depth + 'M', U - 10, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 10, 33, '#9ad8ff', 1, 2); txs(BN[pbi], U - 10, 45, '#8a84b8', 1, 2);
-  // selector de color: 1 2 3 4 (en pantallas táctiles también son botones)
-  for (let k = 0; k < 4; k++) {
-    const x = U - 98 + k * 23, y = V - 26, on = k == q;
-    X.save(); if (on) { X.shadowColor = AX[k].c; X.shadowBlur = 12; }
-    X.fillStyle = on ? AX[k].c : AX[k].k; X.beginPath(); X.roundRect(x, y, 19, 19, 4); X.fill(); X.restore();
-    if (on) { X.strokeStyle = '#ffffff'; X.lineWidth = 1; X.beginPath(); X.roundRect(x - 1.5, y - 1.5, 22, 22, 5); X.stroke(); }
-    tx(k + 1, x + 9.5, y + 6.5, on ? '#000000' : '#ffffffaa', 1, 1);
-  }
-  txs(ax.n, U - 8, V - 38, ax.c, 1, 2);
+  // tu color actual
+  X.save(); X.shadowColor = ax.c; X.shadowBlur = 12; X.fillStyle = ax.c; X.beginPath(); X.moveTo(U - 20, V - 36); X.lineTo(U - 12, V - 23); X.lineTo(U - 20, V - 10); X.lineTo(U - 28, V - 23); X.fill(); X.restore();
+  txs('TU COLOR', U - 34, V - 31, '#8a84b8', 1, 2); txs(ax.n, U - 34, V - 20, ax.c, 1, 2);
   if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); ga(1); }
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
-  if (st == 'play' && t < 8 && S.n < 5) { txs('< > GIRA EL MUNDO PARA CAER HACIA LOS LADOS', U / 2, V - 58, '#e8e4ff', 1, 1); txs('1 2 3 4 CAMBIA DE COLOR: SOLO TU COLOR ES SOLIDO', U / 2, V - 46, '#e8e4ff', 1, 1); }
+  if (st == 'play' && t > 3 && t < 14 && S.n < 5) { txs('TOCA UN CRISTAL: TU LUZ TOMA SU COLOR', U / 2, V - 58, '#e8e4ff', 1, 1); txs('LAS BARRERAS DE TU COLOR SE ABREN', U / 2, V - 46, '#e8e4ff', 1, 1); }
   if (st == 'over') {
     txs('APAGADO', U / 2, 50, '#ff6080', 4, 1);
     txs(why, U / 2, 86, '#e8e4ff', 1, 1);
@@ -665,20 +665,11 @@ onkeydown = e => {
   au(); K[e.code] = 1;
   if (/Arrow|Space/.test(e.code)) e.preventDefault();
   if (!e.repeat && /Space|ArrowUp|KeyW|Enter/.test(e.code)) act();
-  const dg = /^(Digit|Numpad)([1-4])$/.exec(e.code);
-  if (dg) sel(dg[2] - 1);
-  if (e.code == 'KeyQ') sel(q - 1);
-  if (e.code == 'KeyE') sel(q + 1);
   if (e.code == 'KeyM') { S.m ^= 1; save(); if (MG) MG.gain.value = S.m ? 0 : .5; }
 };
 onkeyup = e => K[e.code] = 0;
 let pd = 0;
-cv.onpointerdown = e => {
-  au();
-  const r = cv.getBoundingClientRect(), gx = (e.clientX - r.left) / r.width * U, gy = (e.clientY - r.top) / r.height * V, k = floor((gx - U + 99.5) / 23);
-  if (st == 'play' && gy > V - 30 && k >= 0 && k < 4) { sel(k); pd = 0; return; } // botones de color
-  pd = { x: e.clientX, m: 0 };
-};
+cv.onpointerdown = e => { au(); pd = { x: e.clientX, m: 0 }; };
 onpointermove = e => { if (!pd) return; const dx = (e.clientX - pd.x) * W / cv.clientWidth; pd.x = e.clientX; pd.m += abs(dx); if (st == 'play') drag += dx * .015; };
 onpointerup = () => { if (pd && pd.m < 4) act(); pd = 0; };
 
