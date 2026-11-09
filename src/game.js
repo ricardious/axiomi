@@ -494,7 +494,7 @@ const upd = dt => {
     burst(p.x + gx * 5, p.y + gy * 5, '#fff4d0', 6, 45);
   }
   // la luz: se gasta siempre, más al girar y más cuanto más hondo
-  L -= dt * (4.2 + abs(dth / dt) * 1.2) * (1 + depth / 360) * (q == 2 ? .8 : 1);
+  L -= dt * (3.6 + abs(dth / dt) * 1.2) * (1 + depth / 480) * (q == 2 ? .8 : 1);
   // cristales: al tocarlos tu luz toma su color
   for (const [x, y, k] of CY) if (k != q && hypot(x - p.x, y - p.y) < p.r + 16) { q = pq = k; fl = .25; ban = 2; sfx('sw'); burst(x, y, AX[k].c, 20, 110); }
   near(R => {
@@ -504,9 +504,9 @@ const upd = dt => {
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
   });
-  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + .3); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
+  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + .4); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
   for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
-    e.k = 1; cr++; L = min(100, L + 14); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
+    e.k = 1; cr++; L = min(100, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
   // siguiente punto del camino (para la flecha guía)
