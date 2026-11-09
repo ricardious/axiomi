@@ -255,7 +255,7 @@ const mapR = R => {
     }
   }
   // lámpara colgada del techo de la cámara
-  if (R.lamp) { const x = floor(R.c[0]); let y = floor(R.c[1]); for (let k = 0; k < 110 && !mt(x, y - 1); k++) y--; if (mt(x, y - 1) == 1 && R.c[1] - y > 14) R.lp.push([x, y]); }
+  if (R.lamp) { const x = floor(R.c[0]); let y = floor(R.c[1]); for (let k = 0; k < 110 && !mt(x, y - 1); k++) y--; if (mt(x, y - 1) == 1 && R.c[1] - y > 14) R.lp.push([x, y, 30]); } // cada lámpara guarda 30 de luz
   return m;
 };
 const mat = (x, y) => {
@@ -340,7 +340,7 @@ const rend = (R, qq) => {
     for (let k = -hw; k <= hw; k++) set(sx + nx * s - ny * k - ox, sy + ny * s + nx * k - oy, SPK[s < 1 ? 0 : abs(k) == hw && hw ? 1 : s < 6 ? 2 : s < 9 ? 3 : 4]);
   }
   // lámparas: sólo se encienden en BRASA
-  const on = 1, LC_ = [u32('#040309'), u32(on ? '#ffe6a8' : '#4a3418'), u32('#ffffff')];
+  const on = 0, LC_ = [u32('#040309'), u32(on ? '#ffe6a8' : '#4a3418'), u32('#ffffff')];
   for (const [lx, ly] of R.lp) {
     const i = lx - ox, j = ly - oy;
     for (let k = 0; k < 3; k++) set(i, j + k, LC_[0]);
@@ -442,17 +442,17 @@ const upd = dt => {
     burst(p.x + gx * 5, p.y + gy * 5, '#fff4d0', 6, 45);
   }
   // la luz: se gasta siempre, más al girar y más cuanto más hondo
-  L -= dt * (3.8 + abs(dth / dt) * 1.2) * (1 + depth / 360) * (q == 2 ? .6 : 1);
+  L -= dt * (4.2 + abs(dth / dt) * 1.2) * (1 + depth / 360) * (q == 2 ? .8 : 1);
   // cristales: al tocarlos tu luz toma su color
   for (const [x, y, k] of CY) if (k != q && hypot(x - p.x, y - p.y) < p.r + 16) { q = pq = k; fl = .25; ban = 2; sfx('sw'); burst(x, y, AX[k].c, 20, 110); }
   near(R => {
     for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) die('TE PINCHASTE');
-    for (const [x, y] of R.lp) if (hypot(x - p.x, y + 6 - p.y) < 52) {
-      L = min(100, L + 36 * dt); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
+    for (const l of R.lp) if (l[2] > 0 && hypot(l[0] - p.x, l[1] + 6 - p.y) < 52) {
+      const [x, y] = l, g = max(0, min(l[2], 36 * dt, 100 - L)); L += g; l[2] -= g; if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
   });
-  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + 1); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
+  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + .3); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
   for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
     e.k = 1; cr++; L = min(100, L + 14); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
@@ -568,7 +568,7 @@ const draw = () => {
   }
   for (const R of VS) {
     if (!R.so) X.drawImage(R.img[q] || (R.img[q] = rend(R, q)), R.ox - PD, R.oy - PD);
-    for (const [x, y] of R.lp) lamps.push(ws(x, y + 6));
+    for (const [x, y, c] of R.lp) if (c > 0) { lamps.push(ws(x, y + 6)); ga(min(1, c / 10)); fr(x - 1, y + 4, 3, 5, '#ffe6a8'); fr(x, y + 5, 1, 1, '#ffffff'); ga(1); } // encendida mientras le quede luz
   }
   const VE = E.filter(e => abs(e.x - camx) < VR && abs(e.y - camy) < VR);
   // cristales (llaves de color): rombos que flotan; el de tu color se ve apagado
