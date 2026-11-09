@@ -689,6 +689,7 @@ const draw = () => {
     const lw = tx('AXIOMI', -999, 0, '#000', 9);
     let x = U / 2 - lw / 2; 'AXIOMI'.split('').forEach((ch, i) => { const c = AX[(i + floor(t * 2)) % 4].c, y = 34 + sin(t * 3 + i) * 3; tx(ch, x, y, c, 9); x += 6.4 * .95 * 9; });
     txs('GIRA EL MUNDO. CAMBIA SUS REGLAS.', U / 2, 96, '#e8e4ff', 2, 1);
+    txs('CREADO POR RICARDIOUS', 8, 260, '#9a8fd0', 1, 0);
     txs('<  >  GIRAR EL MUNDO      ESPACIO  SALTAR', U / 2, 182, '#b8b0e0', 1, 1);
     txs('TOCA UN CRISTAL: TU LUZ TOMA SU COLOR', U / 2, 198, '#e8e4ff', 1, 1);
     txs('Y ATRAVIESAS LAS BARRERAS DE ESE COLOR', U / 2, 210, '#e8e4ff', 1, 1);
@@ -850,7 +851,7 @@ const present = () => {
   g = VX.createRadialGradient(SX + W / 2, SY + H / 2, H * .45, SX + W / 2, SY + H / 2, W * .62); g.addColorStop(0, '#00000000'); g.addColorStop(1, '#00000066'); VX.fillStyle = g; VX.fillRect(SX, SY, W, H);
   g = VX.createLinearGradient(SX, SY, SX + W * .5, SY + H); g.addColorStop(0, '#ffffff14'); g.addColorStop(.4, '#ffffff05'); g.addColorStop(.41, '#ffffff00'); VX.fillStyle = g; VX.fillRect(SX, SY, W, H);
   VX.restore();
-  X = VX; tx('AXIOMI', 768, 677, '#d8ccff', 2.4, 1);
+  X = VX; tx('AXIOMI', 768, 677, '#d8ccff', 2.4, 1); tx('CREADO POR RICARDIOUS', 768, 726, '#4a3f7a', 1.5, 1);
 };
 reset(); rsz();
 requestAnimationFrame(loop);

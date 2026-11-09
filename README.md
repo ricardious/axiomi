@@ -1,5 +1,7 @@
 # AXIOMI
 
+Creado por **ricardious**.
+
 Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Girar el mundo cambia hacia dónde cae la gravedad; tocar un **cristal** tiñe tu luz de su color y te deja atravesar las barreras de ese color.
 
 **Jugar:** https://ricardious.github.io/axiomi/
