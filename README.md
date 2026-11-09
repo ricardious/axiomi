@@ -4,6 +4,8 @@ Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña c
 
 **Jugar:** https://ricardious.github.io/axiomi/
 
+El juego se ve dentro de un monitor CRT retro sobre un escritorio de noche (todo dibujado con código).
+
 ## Controles
 
 | Acción | Teclado | Ratón / táctil |
@@ -11,6 +13,7 @@ Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña c
 | Girar el mundo (gravedad) | `←` `→` o `A` `D` | arrastrar a los lados |
 | Saltar | `Espacio`, `↑` o `W` | toque |
 | Sonido on/off | `M` | — |
+| Marco de la PC on/off | `F` | — (en pantallas verticales se juega sin marco) |
 
 ## Cristales y barreras de color
 

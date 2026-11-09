@@ -8,13 +8,18 @@ const cl = (v, a, b) => v < a ? a : v > b ? b : v, lp = (a, b, k) => a + (b - a)
 const rr = (a, b) => a + rnd() * (b - a), ri = (a, b) => floor(rr(a, b + 1)), pk = a => a[floor(rnd() * a.length)];
 const hs = (i, j) => { let h = Math.imul(i | 0, 374761393) + Math.imul(j | 0, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
 const mk = (w, h, f) => { const c = D.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently: !!f }); x.imageSmoothingEnabled = false; return [c, x]; };
-const cv = D.getElementById('c'), O = cv.getContext('2d');
-cv.width = W; cv.height = H;
+const cv = D.getElementById('c'), VX = cv.getContext('2d'), [GSC, O] = mk(W, H); // GSC: la pantalla del juego (960x540)
 const [LC, LX] = mk(U, V), [DC, DX] = mk(U, V);
 let X = LX; // contexto activo: LX (mundo en baja resolución) u O (interfaz nítida)
 const fr = (x, y, w, h, c) => { if (c) X.fillStyle = c; X.fillRect(x, y, w, h); }, ga = a => X.globalAlpha = a;
-const rsz = () => { const s = min(innerWidth / W, innerHeight / H); cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; };
-onresize = rsz; rsz();
+// con marco: el juego se ve dentro de un monitor CRT sobre un escritorio (1536x960); sin marco: sólo la pantalla
+const FW = 1536, FH = 960, SX = 288, SY = 72, frOn = () => S.f == null ? innerWidth >= 700 && innerWidth > innerHeight * 1.1 : S.f;
+const rsz = () => {
+  const f = frOn(), w = f ? FW : W, h = f ? FH : H, s = min(innerWidth / w, innerHeight / h);
+  if (cv.width != w) { cv.width = w; cv.height = h; }
+  cv.style.width = w * s + 'px'; cv.style.height = h * s + 'px';
+};
+onresize = () => rsz();
 const hx = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
 const mix = (a, b, k) => { a = hx(a); b = hx(b); return '#' + a.map((v, i) => (round(lp(v, b[i], k)) | 256).toString(16).slice(1)).join(''); };
 const u32 = (h, a = 255) => { const [r, g, b] = hx(h); return (a << 24 | b << 16 | g << 8 | r) >>> 0; };
@@ -665,6 +670,7 @@ onkeydown = e => {
   au(); K[e.code] = 1;
   if (/Arrow|Space/.test(e.code)) e.preventDefault();
   if (!e.repeat && /Space|ArrowUp|KeyW|Enter/.test(e.code)) act();
+  if (e.code == 'KeyF') { S.f = !frOn(); save(); rsz(); }
   if (e.code == 'KeyM') { S.m ^= 1; save(); if (MG) MG.gain.value = S.m ? 0 : .5; }
 };
 onkeyup = e => K[e.code] = 0;
@@ -684,8 +690,107 @@ const loop = ts => {
     if (st == 'title') { th = ca = sin(t * .45) * .7; q = pq = floor(t * .7) % 4; camx = p.x + sin(t * .2) * 40; camy = p.y + 30 + sin(t * .3) * 30; }
   }
   sh = max(0, sh - dt * 12); fl = max(0, fl - dt * 2.5); ban -= dt; bn -= dt;
-  pre(); draw();
+  pre(); draw(); present();
 };
-reset();
+// ---------- el cuarto: escritorio con la PC (pixel art a 384x240, escalado x4) ----------
+let SCN = 0, SCP = 0;
+const [AC, AX_] = mk(384, 240);
+const scene = () => {
+  if (SCN) return SCN;
+  const [c, s] = mk(384, 240), R_ = (x, y, w, h, k) => { s.fillStyle = k; s.fillRect(x, y, w, h); };
+  const RB = (x, y, w, h, k, r = 2) => { for (let j = 0; j < h; j++) { const d = j < r ? r - j : j >= h - r ? j - h + r + 1 : 0; R_(x + d, y + j, w - 2 * d, 1, k); } };
+  const EL = (cx, cy, rx, ry, k) => { for (let j = -ry; j <= ry; j++) { const w = round(rx * sqrt(1 - (j / ry) ** 2)); R_(cx - w, cy + j, 2 * w + 1, 1, k); } };
+  // pared con degradado tramado y paneles
+  for (let y = 0; y < 198; y++) R_(0, y, 384, 1, mix('#1d1338', '#0d071d', y / 198 + (y & 1) * .03));
+  for (let x = 0; x < 384; x += 64) R_(x, 0, 1, 198, '#22173f');
+  // ventana con cielo, galaxia y cristales lejanos
+  RB(334, 4, 48, 58, '#2c2049'); R_(338, 8, 40, 50, '#0a0820'); R_(357, 8, 2, 50, '#2c2049'); R_(338, 31, 40, 2, '#2c2049');
+  for (let a = 0; a < 6.3; a += .05) { const x = 358 + cos(a) * 14, y = 22 + sin(a) * 4 + cos(a) * 3; R_(round(x), round(y), 1, 1, a < 3.1 ? '#b05cff' : '#ff6ad5'); }
+  EL(358, 22, 2, 2, '#ffd0ff');
+  for (let i = 0; i < 4; i++) { const x = 343 + i * 10, h = 8 + (hs(i, 3) * 14 | 0), w0 = 3 + (i & 1); for (let j = 0; j < h; j++) { const hw = round(w0 * (1 - j / h)); R_(x - hw, 57 - j, hw * 2 + 1, 1, '#5a32b0'); R_(x - hw, 57 - j, 1, 1, '#c9a0ff'); } }
+  // repisa con libros
+  const BK = ['#5b3c8a', '#2f6a8a', '#8a3c6a', '#3c8a6a', '#6a5ab0'];
+  for (let x = 4, i = 0; x < 50; i++) { const w = 4 + (hs(i, 9) * 4 | 0), h = 12 + (hs(i, 4) * 6 | 0); R_(x, 24 - h, w, h, BK[i % 5]); R_(x, 24 - h, 1, h, '#ffffff22'); R_(x + 1, 24 - h + 3, w - 2, 1, '#00000044'); x += w + 1; }
+  R_(0, 24, 60, 3, '#3d2656'); R_(0, 27, 60, 1, '#1a0f2c');
+  // póster con la criatura
+  RB(6, 42, 44, 58, '#3a2a5e'); R_(8, 44, 40, 54, '#140d2e');
+  for (let i = 0; i < 14; i++) R_(9 + (hs(i, 1) * 38 | 0), 45 + (hs(i, 2) * 50 | 0), 1, 1, '#c8b8ff');
+  spr(0, 0, '#4ff0ff', 0); s.drawImage(SPC, 8, 8, 40, 32, 9, 58, 40, 32);
+  for (let i = 0; i < 4; i++) R_(14 + i * 7, 92 - i * 3, 6, 3, '#6a46c8');
+  R_(4, 40, 6, 3, '#8a7ab888'); R_(46, 40, 6, 3, '#8a7ab888');
+  // nota adhesiva
+  R_(16, 112, 18, 17, '#f4d35e'); R_(16, 128, 18, 1, '#c8a838'); R_(20, 117, 8, 6, '#3a2a5e'); R_(21, 118, 6, 4, '#f4d35e'); R_(22, 119, 1, 1, '#3a2a5e'); R_(25, 119, 1, 1, '#3a2a5e'); R_(29, 121, 2, 2, '#c03aa8');
+  // lianas colgando
+  for (const [x0, ln] of [[4, 40], [14, 26], [26, 52], [40, 30], [118, 16], [270, 20]]) for (let y = 0; y < ln; y++) {
+    const x = x0 + round(sin(y * .25 + x0) * 2); R_(x, y, 1, 1, '#2a6a3a');
+    if (y % 5 == 2) { R_(x + 1, y, 3, 2, '#4fbf5a'); R_(x + 1, y, 1, 1, '#8fe08a'); } else if (y % 5 == 4) R_(x - 3, y, 3, 2, '#2f8a3a');
+  }
+  // escritorio
+  R_(0, 196, 384, 44, '#3a2350'); R_(0, 196, 384, 1, '#6a4a8a'); R_(0, 236, 384, 4, '#22143a');
+  for (let i = 0; i < 40; i++) R_(hs(i, 7) * 384 | 0, 199 + (hs(i, 8) * 36 | 0), 8 + (hs(i, 5) * 30 | 0), 1, '#331e48');
+  // monitor CRT: pie, carcasa, bisel, hueco de la pantalla, mentón con placa, rejilla, luces y botón
+  RB(148, 190, 88, 8, '#625a92', 2); R_(150, 190, 84, 1, '#9a92c8'); R_(170, 182, 44, 10, '#575080');
+  RB(54, 0, 276, 190, '#837cb0', 8); R_(60, 1, 264, 1, '#b9b0e0'); R_(55, 8, 1, 174, '#a9a0d4'); R_(328, 8, 1, 174, '#58508a'); R_(62, 188, 260, 1, '#58508a');
+  RB(64, 8, 256, 154, '#58508a', 5); RB(67, 11, 250, 148, '#0a0812', 5);
+  for (let x = 76; x < 122; x += 3) R_(x, 168, 1, 11, '#58508a');
+  RB(150, 165, 84, 15, '#a69ed2', 2); RB(151, 166, 82, 13, '#2a2440', 2);
+  RB(268, 166, 24, 14, '#58508a', 2); RB(270, 167, 20, 12, '#2a2440', 2);
+  // teclado
+  RB(94, 200, 200, 31, '#7a72a8', 3); R_(97, 200, 194, 1, '#a69ed2'); R_(97, 230, 194, 1, '#5d5980');
+  for (let r = 0; r < 4; r++) for (let k = 0; k < 25; k++) {
+    if (k == 18) continue;
+    const x = 99 + k * 7.6 | 0, y = 204 + r * 6;
+    if (r == 3 && k > 4 && k < 13) { if (k == 5) { R_(x, y, 58, 5, '#9d96c6'); R_(x, y + 4, 58, 1, '#625a92'); } continue; }
+    R_(x, y, 6, 5, '#9d96c6'); R_(x, y + 4, 6, 1, '#625a92'); R_(x, y, 6, 1, '#d8d4ec');
+  }
+  // mouse y cable
+  for (let i = 0; i < 30; i++) { const u = i / 29; R_(round(lp(lp(322, 330, u), lp(330, 352, u), u)), round(lp(lp(214, 196, u), lp(196, 198, u), u)), 1, 1, '#5d5980'); }
+  EL(322, 222, 9, 7, '#837cb0'); EL(321, 220, 6, 4, '#b8b4d4'); R_(322, 215, 1, 6, '#58508a');
+  // torre
+  RB(336, 66, 46, 132, '#7a72a8', 3); R_(338, 67, 42, 1, '#a69ed2'); R_(381, 70, 1, 124, '#5d5980');
+  R_(342, 76, 34, 7, '#58508a'); R_(344, 78, 30, 1, '#2a2440'); R_(342, 88, 34, 7, '#58508a'); R_(352, 91, 14, 1, '#2a2440');
+  for (let y = 160; y < 188; y += 3) R_(344, y, 30, 1, '#58508a');
+  RB(350, 116, 16, 28, '#2a2440', 3);
+  // libros, taza y disquete
+  RB(2, 190, 54, 7, '#5b3c8a', 1); R_(4, 191, 50, 1, '#9a7ac8'); RB(5, 184, 48, 6, '#2f5a8a', 1); R_(7, 185, 44, 1, '#7aa8d8');
+  R_(14, 160, 24, 24, '#6a5a9a'); R_(14, 160, 24, 2, '#a99ad8'); R_(15, 162, 22, 2, '#2a1c40'); R_(36, 162, 2, 22, '#4c3e78');
+  R_(8, 166, 6, 2, '#6a5a9a'); R_(8, 166, 2, 12, '#6a5a9a'); R_(8, 176, 6, 2, '#6a5a9a');
+  for (let j = 0; j < 9; j++) R_(26 - (4 - abs(j - 4)), 167 + j, (4 - abs(j - 4)) * 2 + 1, 1, j < 4 ? '#d8c8ff' : '#9a7ae8');
+  RB(40, 214, 24, 22, '#2a2440', 1); R_(44, 214, 14, 7, '#837cb0'); R_(52, 215, 3, 5, '#2a2440'); R_(43, 225, 18, 10, '#d8d0f0'); R_(45, 228, 14, 1, '#9a90c8'); R_(45, 231, 10, 1, '#9a90c8');
+  // cristales sobre la mesa
+  for (const [x, h, w] of [[70, 18, 4], [77, 12, 3], [65, 9, 3]]) for (let j = 0; j < h; j++) { const hw = j < w ? j : w; R_(x - hw, 214 - h + j, hw * 2 + 1, 1, j < 2 ? '#e8dcff' : '#8a5cff'); R_(x - hw, 214 - h + j, 1, 1, '#d8c4ff'); R_(x + hw, 214 - h + j, 1, 1, '#4a24a0'); }
+  // líneas de escaneo de la pantalla
+  const [sc, sx] = mk(1, 4); sx.fillStyle = '#00000038'; sx.fillRect(0, 3, 1, 1); SCP = VX.createPattern(sc, 'repeat');
+  return SCN = c;
+};
+// detalles animados: estrellas, vapor de la taza, luces de la PC, emblema del color actual
+const anim = () => {
+  const a = AX_, P_ = (x, y, w, h, k) => { a.fillStyle = k; a.fillRect(x, y, w, h); }, ac = AX[q].c;
+  a.clearRect(0, 0, 384, 240);
+  for (let i = 0; i < 16; i++) { a.globalAlpha = .5 + .5 * sin(t * (1 + hs(i, 5) * 3) + i); P_(339 + (hs(i, 6) * 38 | 0), 9 + (hs(i, 7) * 42 | 0), 1, 1, '#ffffff'); }
+  for (let i = 0; i < 9; i++) { const u = (t * .5 + i / 9) % 1; a.globalAlpha = (1 - u) * .5; P_(round(20 + i % 3 * 5 + sin(u * 9 + i) * 2), round(158 - u * 34), 1 + (i & 1), 1, '#e8e0ff'); }
+  a.globalAlpha = 1;
+  P_(246, 171, 3, 3, '#3cff7a'); P_(254, 171, 3, 3, t % 1.4 < .7 ? '#ffb347' : '#5a3a10');
+  P_(273, 169, 14, 8, '#14102a'); P_(275, 170, 10, 6, '#3cff7a'); P_(277, 171, 6, 4, '#14102a'); P_(279, 169, 2, 4, '#3cff7a');
+  P_(370, 79, 2, 2, hs(floor(t * 9), 1) < .5 ? '#3cff7a' : '#0c3a1c');
+  for (let j = 0; j < 22; j++) { const hw = j < 11 ? j * .5 | 0 : (21 - j) * .5 | 0; P_(358 - hw, 119 + j, hw * 2 + 1, 1, j < 11 ? mix(ac, '#ffffff', .4) : ac); }
+  a.globalAlpha = .6 + .4 * sin(t * 2); P_(70, 196, 1, 1, '#ffffff'); P_(64, 206, 1, 1, '#ffffff'); a.globalAlpha = 1;
+};
+const present = () => {
+  VX.setTransform(1, 0, 0, 1, 0, 0); VX.imageSmoothingEnabled = false;
+  if (cv.width != FW) { VX.drawImage(GSC, 0, 0); return; }
+  VX.drawImage(scene(), 0, 0, FW, FH); anim(); VX.drawImage(AC, 0, 0, FW, FH);
+  // la luz de la pantalla tiñe el cuarto con tu color
+  VX.globalCompositeOperation = 'lighter'; let g = VX.createRadialGradient(SX + W / 2, SY + H / 2, 200, SX + W / 2, SY + H / 2, 1000);
+  g.addColorStop(0, AX[q].c + '30'); g.addColorStop(1, AX[q].c + '00'); VX.fillStyle = g; VX.fillRect(0, 0, FW, FH); VX.globalCompositeOperation = 'source-over';
+  // pantalla CRT: esquinas redondeadas, líneas de escaneo, viñeta y reflejo del vidrio
+  VX.save(); VX.beginPath(); VX.roundRect(SX, SY, W, H, 26); VX.clip();
+  VX.drawImage(GSC, SX, SY); VX.fillStyle = SCP; VX.fillRect(SX, SY, W, H);
+  g = VX.createRadialGradient(SX + W / 2, SY + H / 2, H * .45, SX + W / 2, SY + H / 2, W * .62); g.addColorStop(0, '#00000000'); g.addColorStop(1, '#00000066'); VX.fillStyle = g; VX.fillRect(SX, SY, W, H);
+  g = VX.createLinearGradient(SX, SY, SX + W * .5, SY + H); g.addColorStop(0, '#ffffff14'); g.addColorStop(.4, '#ffffff05'); g.addColorStop(.41, '#ffffff00'); VX.fillStyle = g; VX.fillRect(SX, SY, W, H);
+  VX.restore();
+  X = VX; tx('AXIOMI', 768, 677, '#d8ccff', 2.4, 1);
+};
+reset(); rsz();
 requestAnimationFrame(loop);
 })();
