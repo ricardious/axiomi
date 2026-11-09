@@ -149,14 +149,20 @@ const carve = (R, ex, rc, tr, oc) => {
   const c = R.c;
   for (const [x, y, r] of ex) {
     const dx = c[0] - x, dy = c[1] - y, l = hypot(dx, dy) || 1, j = rr(-.3, .3) * l, m = [x + dx / 2 - dy / l * j, y + dy / 2 + dx / l * j], rm = (r + rc) / 2;
-    cap([x, y], m, r, rm, oc); cap(m, c, rm, rc, oc); R.sd.push(m); EX.push([x, y]);
+    cap([x, y], m, r, rm, oc); cap(m, c, rm, rc, oc); R.sd.push(m); EX.push([x, y]); R.ax.push([x, y, ...m], [...m, ...c]);
     if (tr) for (const [a, b_] of [[[x, y], m], [m, c]]) for (let k = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; k < n; k++) E.push({ x: lp(a[0], b_[0], k / n), y: lp(a[1], b_[1], k / n), ph: k, s: 1 });
   }
 };
+// el eje del camino debe quedar libre: ningún obstáculo a menos de d px de los ejes de los túneles de la sala
+const clr = (R, pts, d) => pts.every(([x, y]) => R.ax.every(a => cd(x, y, a[0], a[1], 0, a[2], a[3], 0) > d));
+const ring = (x, y, rx, ry) => [...Array(16)].map((_, k) => [x + cos(k * PI / 8) * rx, y + sin(k * PI / 8) * ry]);
+const seg = (a, b) => [...Array(9)].map((_, k) => [lp(a[0], b[0], k / 8), lp(a[1], b[1], k / 8)]);
+// cristal (llave) sobre el eje del túnel que lleva a la salida (x, y), a 40 px de ella
+const kp = (R, x, y, k) => { const a = R.ax.find(a => a[0] == x && a[1] == y), l = hypot(a[2] - x, a[3] - y) || 1, f = min(40, l * .8) / l; return [x + (a[2] - x) * f, y + (a[3] - y) * f, k]; };
 const gen = () => {
   const ry = gr++, oy = ry * RH, d = min(1, ry / 45), Rs = [], bi = BI(ry), big = bi & 1; // bosque y abismo son abiertos
   for (let i = 0; i < NC; i++) {
-    const R = { rx: i, ry, bi, ox: i * RW, oy, k: 0, sd: [], img: [], ux: -1e3, c: [i * RW + RW / 2 + rr(-60, 60), oy + RH / 2 + rr(-38, 38)] };
+    const R = { rx: i, ry, bi, ox: i * RW, oy, k: 0, sd: [], ax: [], img: [], ux: -1e3, c: [i * RW + RW / 2 + rr(-60, 60), oy + RH / 2 + rr(-38, 38)] };
     Rs.push(R); RM.set(ry * 8 + i, R);
   }
   const c = pc, c2 = ry && rnd() < .8 ? cl(c + pk([-3, -2, -1, -1, 1, 1, 2, 3]), 0, NC - 1) : c, lo = min(c, c2), hi = max(c, c2), hb_ = [];
@@ -172,9 +178,10 @@ const gen = () => {
     if (big && ry) R.c = [R.ox + RW / 2 + rr(-30, 30), oy + RH / 2 + rr(-10, 10)];
     const rc = !ry ? 48 : bi == 1 ? rr(56, 66) : bi == 3 ? rr(70, 78) : rr(24, 46), vx = e => e[1] == oy || e[1] == oy + RH;
     carve(R, ex, rc, ry, bi == 2);
-    if (bi == 1) for (let n = ri(2, 4); n--;) { // hongos gigantes: tallo y sombrero, sirven de plataforma
+    if (bi == 1) for (let n = 12, put = 0; n-- && put < 3;) { // hongos gigantes: tallo y sombrero, sirven de plataforma
       const x = R.ox + rr(36, RW - 36), cy = R.c[1] + rr(-15, 35), rx = rr(20, 36), r_ = rr(7, 11), tx = x + rr(-10, 10);
-      if (ex.some(e => vx(e) ? abs(e[0] - x) < e[2] + rx + 12 : hypot(e[0] - tx, e[1] - cy) < e[2] + rx + 10)) continue;
+      if (ex.some(e => vx(e) ? abs(e[0] - x) < e[2] + rx + 12 : hypot(e[0] - tx, e[1] - cy) < e[2] + rx + 10) || !clr(R, [...ring(tx, cy, rx + 2, r_ + 2), ...seg([x, oy + RH - 2], [tx, cy])], 22)) continue;
+      put++;
       fil(6, 0, [x, oy + RH - 2, 6, tx, cy, 4], [min(x, tx) - 8, cy - 8, max(x, tx) + 8, oy + RH]);
       fil(6, 1, [tx, cy, rx, r_, 1], [tx - rx - 3, cy - r_ - 3, tx + rx + 3, cy + r_ + 3]);
     }
@@ -182,17 +189,19 @@ const gen = () => {
       const a = rnd() * 7;
       if (ex.some(e => abs((Math.atan2(e[1] - R.c[1], e[0] - R.c[0]) - a + 3 * PI) % (2 * PI) - PI) < .55)) continue;
       const l1 = rc + 14, l2 = rc - rr(6, 18), s1 = [R.c[0] + cos(a) * l1, R.c[1] + sin(a) * l1], s2 = [R.c[0] + cos(a) * l2, R.c[1] + sin(a) * l2];
+      if (!clr(R, seg(s2, s1), 18)) continue;
       fil(6, 0, [...s1, 6, ...s2, 1], [min(s1[0], s2[0]) - 7, min(s1[1], s2[1]) - 7, max(s1[0], s2[0]) + 7, max(s1[1], s2[1]) + 7]);
     }
-    if (bi == 3) for (let n = ri(2, 4); n--;) { // islas flotantes en el vacío
+    if (bi == 3) for (let n = 12, put = 0; n-- && put < 4;) { // islas flotantes en el vacío
       const rx = rr(16, 34), r_ = rr(7, 12), x = R.ox + rr(rx + 10, RW - rx - 10), y = oy + rr(30, RH - 30);
-      if (ex.some(e => vx(e) && abs(e[0] - x) < e[2] + rx + 12)) continue;
+      if (ex.some(e => vx(e) && abs(e[0] - x) < e[2] + rx + 12) || !clr(R, ring(x, y, rx + 2, r_ + 2), 22)) continue;
+      put++;
       fil(rnd() < .3 ? ri(2, 5) : 1, 1, [x, y, rx, r_, 0], [x - rx - 6, y - r_ - 6, x + rx + 6, y + r_ + 6]);
       E.push({ x, y: y - r_ - 10, ph: rnd() * 6 });
     }
     for (const m of [...R.sd, R.c]) if (ry && rnd() < .3) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
     // islas de materia de color dentro de las cámaras
-    if (ry > 1 && rnd() < .35 + d * .4) { const a = rnd() * 7, rb = rr(7, 13), o = rb + rr(12, 26), x = R.c[0] + cos(a) * o, y = R.c[1] + sin(a) * o; CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
+    if (ry > 1 && rnd() < .35 + d * .4) { const a = rnd() * 7, rb = rr(7, 13), o = rb + rr(12, 26), x = R.c[0] + cos(a) * o, y = R.c[1] + sin(a) * o; if (clr(R, ring(x, y, rb + 2, rb + 2), 18)) CO.push([ri(0, 3), x - rb - 4, y - rb - 4, x + rb + 4, y + rb + 4, x, y, rb]); }
   }
   // camino de puntos (lo usa el bot de pruebas)
   for (let i = c, s = c2 > c ? 1 : -1; ; i += s) { WP.push(Rs[i].c); if (i == c2) break; WP.push(hb_[s > 0 ? i : i - 1]); }
@@ -205,8 +214,8 @@ const gen = () => {
   }
   // barreras de color en las salidas, cada una con su cristal (la llave) justo antes, en el túnel
   const pl = ry > 1 ? .35 + d * .4 : 0, sg = c2 > c ? 1 : -1;
-  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push([k, x - 5, y - r - 18, x + 5, y + r + 18]); CY.push([x - sg * 42, y, k]); }
-  if (ry == 1 || ry > 1 && rnd() < pl) { const k = ry == 1 ? ri(1, 3) : ri(0, 3); CO.push([k, dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]); CY.push([dx, oy + RH - 42, k]); }
+  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push([k, x - 5, y - r - 18, x + 5, y + r + 18]); CY.push(kp(Rs[sg > 0 ? i : i + 1], x, y, k)); }
+  if (ry == 1 || ry > 1 && rnd() < pl) { const k = ry == 1 ? ri(1, 3) : ri(0, 3); CO.push([k, dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]); CY.push(kp(Rs[c2], dx, oy + RH, k)); }
   pc = c2; pdx = dx; pdr = dr;
 };
 
@@ -251,7 +260,7 @@ const mapR = R => {
     if (f) for (let k = -len >> 1; k < len >> 1; k++) {
       let x = bx - ny * k * 5, y = by + nx * k * 5, ok = 0;
       for (let z = -6; z <= 6 && !ok; z++) { const xx = x + nx * z, yy = y + ny * z; if (!mt(xx, yy) && mt(xx - nx, yy - ny) == 1) { x = xx; y = yy; ok = 1; } }
-      if (ok && !EX.some(e => hypot(e[0] - x, e[1] - y) < 52) && !(ny < 0 && abs(x - R.ux) < 48)) R.sp.push([x, y, nx, ny]);
+      if (ok && !EX.some(e => hypot(e[0] - x, e[1] - y) < 52) && !(ny < 0 && abs(x - R.ux) < 48) && clr(R, [[x + nx * 10, y + ny * 10]], 24)) R.sp.push([x, y, nx, ny]); // sólo donde sobra espacio
     }
   }
   // lámpara colgada del techo de la cámara
