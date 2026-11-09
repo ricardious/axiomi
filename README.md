@@ -28,7 +28,7 @@ Funcionan como **llave y puerta**: toca un cristal y tu luz toma su color. **Las
 
 ## Biomas
 
-Cada ~70 m el pozo cambia de escenario:
+Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túneles de roca) y **geométricos** (salas cuadradas y pasillos rectos): grutas → ruinas → bosque hongo → cubos → geoda → abismo.
 
 | Bioma | Cómo es |
 |---|---|
@@ -36,6 +36,8 @@ Cada ~70 m el pozo cambia de escenario:
 | **BOSQUE HONGO** | cavernas abiertas con hongos gigantes que sirven de plataforma, esporas y lianas |
 | **GEODA** | cámaras de paredes facetadas con cristales que brotan de los muros |
 | **ABISMO** | un vacío enorme con islas flotantes (algunas de color) por el que caes |
+| **RUINAS** | templo de ladrillo: salas rectangulares, pasillos rectos y escaleras, columnas rotas y arcadas al fondo |
+| **CUBOS** | grandes salas cuadradas de losetas con bloques flotantes (algunos de color) |
 
 ## Cómo se juega
 
@@ -49,7 +51,7 @@ Cada ~70 m el pozo cambia de escenario:
 
 ## Reglas del reto
 
-- **≤ 32 KB:** el juego completo es un único `index.html` (~15 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
+- **≤ 32 KB:** el juego completo es un único `index.html` (~23 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
 - **Código propio:** JavaScript puro con Canvas 2D y Web Audio. Sin librerías, frameworks ni motores.
 - **Cero assets:** el pixel art (cuevas, criatura, flora), la luz tramada, la tipografía vectorial, los efectos y la música generativa se crean con código.
 
