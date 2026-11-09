@@ -13,9 +13,11 @@ const [LC, LX] = mk(U, V), [DC, DX] = mk(U, V);
 let X = LX; // contexto activo: LX (mundo en baja resolución) u O (interfaz nítida)
 const fr = (x, y, w, h, c) => { if (c) X.fillStyle = c; X.fillRect(x, y, w, h); }, ga = a => X.globalAlpha = a;
 // con marco: el juego se ve dentro de un monitor CRT sobre un escritorio (1536x960); sin marco: sólo la pantalla
-const FW = 1536, FH = 960, SX = 288, SY = 72, frOn = () => S.f == null ? innerWidth >= 700 && innerWidth > innerHeight * 1.1 : S.f;
+const FW = 1536, FH = 960, SX = 288, SY = 72, FO = [0, 0], frOn = () => S.f == null ? innerWidth >= 700 && innerWidth > innerHeight * 1.1 : S.f;
 const rsz = () => {
-  const f = frOn(), w = f ? FW : W, h = f ? FH : H, s = min(innerWidth / w, innerHeight / h);
+  // con marco, el lienzo crece hasta la forma de la ventana: el cuarto se extiende y no quedan franjas negras
+  const f = frOn(), a = innerWidth / innerHeight, w = f ? max(FW, round(FH * a / 4) * 4) : W, h = f ? max(FH, round(FW / a / 4) * 4) : H, s = min(innerWidth / w, innerHeight / h);
+  FO[0] = (w - FW) / 2; FO[1] = (h - FH) / 2;
   if (cv.width != w) { cv.width = w; cv.height = h; }
   cv.style.width = w * s + 'px'; cv.style.height = h * s + 'px';
 };
@@ -611,7 +613,8 @@ const draw = () => {
   ga(1); X.globalCompositeOperation = 'source-over';
   // escenario
   X.save(); view(ox, oy);
-  fr(-3000, camy - 3000, 3000, 6000, '#040309'); fr(WW, camy - 3000, 3000, 6000); fr(-3000, -3000, WW + 6000, 3000);
+  // fuera del pozo: paredes con la misma roca del bioma de cada fila (no un negro plano)
+  for (let j = floor((camy - VR) / RH); j <= floor((camy + VR) / RH); j++) { X.fillStyle = rock(j < 5 ? 0 : BI(j)); fr(-VR * 2, j * RH, VR * 2, RH); fr(WW, j * RH, VR * 2, RH); if (j < 0) fr(0, j * RH, WW, RH); }
   const lamps = [], VS = [];
   for (let j = max(0, floor((camy - VR) / RH)); j <= floor((camy + VR) / RH); j++) for (let i = max(0, floor((camx - VR) / RW)); i <= min(NC - 1, floor((camx + VR) / RW)); i++) {
     const R = room(i, j); if (!R) continue;
@@ -830,11 +833,17 @@ const anim = () => {
 };
 const present = () => {
   VX.setTransform(1, 0, 0, 1, 0, 0); VX.imageSmoothingEnabled = false;
-  if (cv.width != FW) { VX.drawImage(GSC, 0, 0); return; }
-  VX.drawImage(scene(), 0, 0, FW, FH); anim(); VX.drawImage(AC, 0, 0, FW, FH);
+  if (cv.width < FW) { D.body.style.background = mix(AX[q].c, '#030208', .9); VX.drawImage(GSC, 0, 0); return; }
+  const [ox, oy] = FO, sc = scene(), cw = cv.width, ch = cv.height;
+  D.body.style.background = '#0d071d';
+  // bordes: se estira la última columna del cuarto (pared lisa y escritorio) y las filas de arriba/abajo
+  if (ox) { VX.drawImage(sc, 383, 0, 1, 240, 0, oy, ox, FH); VX.drawImage(sc, 383, 0, 1, 240, ox + FW, oy, ox, FH); }
+  if (oy) { VX.drawImage(sc, 0, 0, 384, 1, 0, 0, cw, oy); VX.drawImage(sc, 0, 239, 384, 1, 0, oy + FH, cw, oy); }
+  VX.setTransform(1, 0, 0, 1, ox, oy);
+  VX.drawImage(sc, 0, 0, FW, FH); anim(); VX.drawImage(AC, 0, 0, FW, FH);
   // la luz de la pantalla tiñe el cuarto con tu color
   VX.globalCompositeOperation = 'lighter'; let g = VX.createRadialGradient(SX + W / 2, SY + H / 2, 200, SX + W / 2, SY + H / 2, 1000);
-  g.addColorStop(0, AX[q].c + '30'); g.addColorStop(1, AX[q].c + '00'); VX.fillStyle = g; VX.fillRect(0, 0, FW, FH); VX.globalCompositeOperation = 'source-over';
+  g.addColorStop(0, AX[q].c + '30'); g.addColorStop(1, AX[q].c + '00'); VX.fillStyle = g; VX.fillRect(-ox, -oy, cw, ch); VX.globalCompositeOperation = 'source-over';
   // pantalla CRT: esquinas redondeadas, líneas de escaneo, viñeta y reflejo del vidrio
   VX.save(); VX.beginPath(); VX.roundRect(SX, SY, W, H, 26); VX.clip();
   VX.drawImage(GSC, SX, SY); VX.fillStyle = SCP; VX.fillRect(SX, SY, W, H);
