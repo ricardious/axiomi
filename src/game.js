@@ -422,7 +422,7 @@ const near = f => { const rx = floor(p.x / RW), ry = floor(p.y / RH); for (let j
 // el axioma (color) se elige con botones; girar sólo cambia la gravedad
 const sel = k => {
   k = (k % 4 + 4) % 4; if (st != 'play' || k == q) return;
-  q = pq = k; L -= 2; fl = .2; ban = 1.1; sfx('sw'); burst(p.x, p.y, AX[q].c, 14, 90);
+  q = pq = k; L -= 1.5; fl = .2; ban = 1.1; sfx('sw'); burst(p.x, p.y, AX[q].c, 14, 90);
 };
 const upd = dt => {
   t += dt;
@@ -442,17 +442,17 @@ const upd = dt => {
     burst(p.x + gx * 5, p.y + gy * 5, '#fff4d0', 6, 45);
   }
   // la luz: se gasta siempre, más al girar y más cuanto más hondo
-  L -= dt * (4.5 + abs(dth / dt) * 1.3) * (1 + depth / 300) * (q == 3 ? 1.4 : 1);
+  L -= dt * (3.8 + abs(dth / dt) * 1.2) * (1 + depth / 360) * (q == 3 ? 1.4 : 1);
   near(R => {
     for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) die('TE PINCHASTE');
     if (q == 2) for (const [x, y] of R.lp) if (hypot(x - p.x, y + 6 - p.y) < 52) {
-      L = min(100, L + 30 * dt); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
+      L = min(100, L + 36 * dt); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
   });
-  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + .8); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
+  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + 1); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
   for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
-    e.k = 1; cr++; L = min(100, L + 12); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
+    e.k = 1; cr++; L = min(100, L + 14); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
   // siguiente punto del camino (para la flecha guía)
