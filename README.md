@@ -29,6 +29,15 @@ Funcionan como **llave y puerta**: toca un cristal y tu luz toma su color. **Las
 | **ÁMBAR** | gastas menos luz |
 | **VERDE** | el tiempo se frena |
 
+## El Guardián
+
+Al final de cada mundo que gira (el primero a unos 60 m, luego cada ~150 m) hay una cámara con un **Guardián** que sella la salida. No se le dispara: se le vence con el color.
+
+- Su **coraza** tiene un color. Si lo tocas con otro, te quema luz y te rebota.
+- Toca el **cristal de su color** (la flecha lo señala) y **embístelo**: atraviesas la coraza y golpeas el núcleo. Con su color encima, él huye: gira el mundo para caerle encima.
+- Tras cada golpe **cambia de color** y se vuelve más rápido. Lanza **brasas** de su color; las de tu color no te hacen nada.
+- Mientras peleas, **la Sombra espera** y la luz se gasta a la mitad. Al vencerlo se abre la salida, recuperas luz y la Sombra retrocede.
+
 ## Biomas
 
 Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túneles de roca) y **geométricos** (salas cuadradas y pasillos rectos). En los geométricos **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse: grutas → ruinas → bosque hongo → cubos → geoda → abismo.
