@@ -61,13 +61,25 @@ Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos**, 
 
 ## Biomas
 
-Cada ~70 m el pozo cambia de escenario. Tras las grutas llegan los dos mundos alegres y luego se alternan los demás: grutas → laguna → jardín → ruinas → bosque hongo → cubos → geoda → abismo. En los geométricos (ruinas y cubos) **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse.
+Cada ~70 m el pozo cambia de escenario. Siempre empiezas en las grutas, pero **el orden de los demás biomas se sortea en cada partida**: nunca sabes qué viene después. Pasas por todos antes de que alguno se repita, y nunca te toca el mismo dos veces seguidas. En los geométricos (ruinas y cubos) **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse.
+
+En cinco biomas **la criatura se transforma** y cambia cómo te mueves:
+
+| Bioma | Transformación | Qué cambia |
+|---|---|---|
+| **LAGUNA** | pez, con aletas y cola | caes despacio y **cada salto es una brazada** |
+| **CIELO** | alas | **planeas** al caer y en el aire tienes un aleteo extra |
+| **NIEVE** | bufanda de tu color | el suelo es hielo: **te deslizas** casi sin frenar |
+| **DULCE** | una burbuja | **rebotas** en las paredes |
 
 | Bioma | Cómo es |
 |---|---|
 | **GRUTAS** | túneles y cámaras de roca con hierba y raíces |
 | **LAGUNA** | todo bajo el agua: caes despacio, **cada salto es una brazada** y la criatura cambia de forma, con aletas y cola de pez. Algas, burbujas y más luz |
 | **JARDÍN** | cavernas luminosas de tierra con pasto, flores de colores, enredaderas y pétalos que caen |
+| **CIELO** | cielo azul entre nubes enormes, islas de nube flotando y motas blancas en el aire |
+| **NIEVE** | cuevas de hielo con nieve en el suelo, carámbanos colgando y copos que caen |
+| **DULCE** | muros de caramelo a rayas, glaseado rosa que gotea del techo y chispas de azúcar |
 | **BOSQUE HONGO** | cavernas abiertas con hongos gigantes que sirven de plataforma, esporas y lianas |
 | **GEODA** | cámaras de paredes facetadas con cristales que brotan de los muros |
 | **ABISMO** | un vacío enorme con islas flotantes (algunas de color) por el que caes |
@@ -86,7 +98,7 @@ Cada ~70 m el pozo cambia de escenario. Tras las grutas llegan los dos mundos al
 
 ## Reglas del reto
 
-- **≤ 32 KB:** el juego completo es un único `index.html` (~24 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
+- **≤ 32 KB:** el juego completo es un único `index.html` (~28 KB), que es exactamente lo que descarga el navegador. El build falla si se pasa del límite.
 - **Código propio:** JavaScript puro con Canvas 2D y Web Audio. Sin librerías, frameworks ni motores.
 - **Cero assets:** el pixel art (cuevas, criatura, flora), la luz tramada, la tipografía vectorial, los efectos y la música generativa se crean con código.
 
