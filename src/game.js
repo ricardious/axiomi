@@ -13,7 +13,7 @@ const [LC, LX] = mk(U, V), [DC, DX] = mk(U, V);
 let X = LX; // contexto activo: LX (mundo en baja resolución) u O (interfaz nítida)
 const fr = (x, y, w, h, c) => { if (c) X.fillStyle = c; X.fillRect(x, y, w, h); }, ga = a => X.globalAlpha = a;
 // con marco: el juego se ve dentro de un monitor CRT sobre un escritorio (1536x960); sin marco: sólo la pantalla
-const FW = 1536, FH = 960, SX = 288, SY = 72, FO = [0, 0], frOn = () => S.f == null ? innerWidth >= 700 && innerWidth > innerHeight * 1.1 : S.f;
+const FW = 1536, FH = 960, SX = 288, SY = 112, FO = [0, 0], frOn = () => S.f == null ? innerWidth >= 700 && innerWidth > innerHeight * 1.1 : S.f;
 const rsz = () => {
   // con marco, el lienzo crece hasta la forma de la ventana: el cuarto se extiende y no quedan franjas negras
   const f = frOn(), a = innerWidth / innerHeight, w = f ? max(FW, round(FH * a / 4) * 4) : W, h = f ? max(FH, round(FW / a / 4) * 4) : H, s = min(innerWidth / w, innerHeight / h);
@@ -850,6 +850,9 @@ const loop = ts => {
 };
 // ---------- el cuarto: escritorio con la PC (pixel art a 384x240, escalado x4) ----------
 let SCN = 0, SCP = 0;
+// guirnalda de luces sobre el monitor: [x, y, color] de cada foco
+const GB = [], GS = [[4, 62], [62, 160], [160, 252], [252, 330]], gy = (a, b, x) => 2 + round(7 * sin(PI * (x - a) / (b - a)));
+for (const [a, b] of GS) for (let x = a + 6; x < b - 3; x += 9) GB.push([x, gy(a, b, x), GB.length % 4]);
 const [AC, AX_] = mk(384, 240);
 const scene = () => {
   if (SCN) return SCN;
@@ -882,15 +885,19 @@ const scene = () => {
     if (y % 5 == 2) { R_(x + 1, y, 3, 2, '#4fbf5a'); R_(x + 1, y, 1, 1, '#8fe08a'); } else if (y % 5 == 4) R_(x - 3, y, 3, 2, '#2f8a3a');
   }
   // escritorio
-  R_(0, 196, 384, 44, '#3a2350'); R_(0, 196, 384, 1, '#6a4a8a'); R_(0, 236, 384, 4, '#22143a');
+  R_(0, 196, 384, 44, '#3a2350'); R_(0, 196, 384, 1, '#6a4a8a'); R_(0, 233, 384, 7, '#1c0f2e'); R_(0, 233, 384, 1, '#5a3f7a');
   for (let i = 0; i < 40; i++) R_(hs(i, 7) * 384 | 0, 199 + (hs(i, 8) * 36 | 0), 8 + (hs(i, 5) * 30 | 0), 1, '#331e48');
+  // sombras suaves de lo que está sobre la mesa
+  for (const [x, y, w] of [[0, 197, 60], [142, 197, 100], [332, 197, 52], [94, 231, 202], [312, 228, 22]]) R_(x, y, w, 2, '#22123a');
+  // cable de la guirnalda
+  for (const [a, b] of GS) for (let x = a; x <= b; x++) R_(x, gy(a, b, x), 1, 1, '#120a24');
   // monitor CRT: pie, carcasa, bisel, hueco de la pantalla, mentón con placa, rejilla, luces y botón
   RB(148, 190, 88, 8, '#625a92', 2); R_(150, 190, 84, 1, '#9a92c8'); R_(170, 182, 44, 10, '#575080');
-  RB(54, 0, 276, 190, '#837cb0', 8); R_(60, 1, 264, 1, '#b9b0e0'); R_(55, 8, 1, 174, '#a9a0d4'); R_(328, 8, 1, 174, '#58508a'); R_(62, 188, 260, 1, '#58508a');
-  RB(64, 8, 256, 154, '#58508a', 5); RB(67, 11, 250, 148, '#0a0812', 5);
-  for (let x = 76; x < 122; x += 3) R_(x, 168, 1, 11, '#58508a');
-  RB(150, 165, 84, 15, '#a69ed2', 2); RB(151, 166, 82, 13, '#2a2440', 2);
-  RB(268, 166, 24, 14, '#58508a', 2); RB(270, 167, 20, 12, '#2a2440', 2);
+  RB(54, 10, 276, 180, '#837cb0', 8); R_(60, 11, 264, 1, '#b9b0e0'); R_(55, 18, 1, 164, '#a9a0d4'); R_(328, 18, 1, 164, '#58508a'); R_(62, 188, 260, 1, '#58508a');
+  RB(64, 18, 256, 154, '#58508a', 5); RB(67, 21, 250, 148, '#0a0812', 5);
+  for (let x = 76; x < 122; x += 3) R_(x, 175, 1, 9, '#58508a');
+  RB(150, 173, 84, 10, '#a69ed2', 2); RB(151, 174, 82, 8, '#2a2440', 2);
+  RB(268, 173, 24, 12, '#58508a', 2); RB(270, 174, 20, 10, '#2a2440', 2);
   // teclado
   RB(94, 200, 200, 31, '#7a72a8', 3); R_(97, 200, 194, 1, '#a69ed2'); R_(97, 230, 194, 1, '#5d5980');
   for (let r = 0; r < 4; r++) for (let k = 0; k < 25; k++) {
@@ -912,7 +919,7 @@ const scene = () => {
   R_(14, 160, 24, 24, '#6a5a9a'); R_(14, 160, 24, 2, '#a99ad8'); R_(15, 162, 22, 2, '#2a1c40'); R_(36, 162, 2, 22, '#4c3e78');
   R_(8, 166, 6, 2, '#6a5a9a'); R_(8, 166, 2, 12, '#6a5a9a'); R_(8, 176, 6, 2, '#6a5a9a');
   for (let j = 0; j < 9; j++) R_(26 - (4 - abs(j - 4)), 167 + j, (4 - abs(j - 4)) * 2 + 1, 1, j < 4 ? '#d8c8ff' : '#9a7ae8');
-  RB(40, 214, 24, 22, '#2a2440', 1); R_(44, 214, 14, 7, '#837cb0'); R_(52, 215, 3, 5, '#2a2440'); R_(43, 225, 18, 10, '#d8d0f0'); R_(45, 228, 14, 1, '#9a90c8'); R_(45, 231, 10, 1, '#9a90c8');
+  RB(40, 210, 24, 22, '#2a2440', 1); R_(44, 210, 14, 7, '#837cb0'); R_(52, 211, 3, 5, '#2a2440'); R_(43, 221, 18, 10, '#d8d0f0'); R_(45, 224, 14, 1, '#9a90c8'); R_(45, 227, 10, 1, '#9a90c8');
   // cristales sobre la mesa
   for (const [x, h, w] of [[70, 18, 4], [77, 12, 3], [65, 9, 3]]) for (let j = 0; j < h; j++) { const hw = j < w ? j : w; R_(x - hw, 214 - h + j, hw * 2 + 1, 1, j < 2 ? '#e8dcff' : '#8a5cff'); R_(x - hw, 214 - h + j, 1, 1, '#d8c4ff'); R_(x + hw, 214 - h + j, 1, 1, '#4a24a0'); }
   // líneas de escaneo de la pantalla
@@ -926,8 +933,9 @@ const anim = () => {
   for (let i = 0; i < 16; i++) { a.globalAlpha = .5 + .5 * sin(t * (1 + hs(i, 5) * 3) + i); P_(339 + (hs(i, 6) * 38 | 0), 9 + (hs(i, 7) * 42 | 0), 1, 1, '#ffffff'); }
   for (let i = 0; i < 9; i++) { const u = (t * .5 + i / 9) % 1; a.globalAlpha = (1 - u) * .5; P_(round(20 + i % 3 * 5 + sin(u * 9 + i) * 2), round(158 - u * 34), 1 + (i & 1), 1, '#e8e0ff'); }
   a.globalAlpha = 1;
-  P_(246, 171, 3, 3, '#3cff7a'); P_(254, 171, 3, 3, t % 1.4 < .7 ? '#ffb347' : '#5a3a10');
-  P_(273, 169, 14, 8, '#14102a'); P_(275, 170, 10, 6, '#3cff7a'); P_(277, 171, 6, 4, '#14102a'); P_(279, 169, 2, 4, '#3cff7a');
+  P_(246, 177, 3, 3, '#3cff7a'); P_(254, 177, 3, 3, t % 1.4 < .7 ? '#ffb347' : '#5a3a10');
+  P_(273, 175, 14, 8, '#14102a'); P_(275, 176, 10, 6, '#3cff7a'); P_(277, 177, 6, 4, '#14102a'); P_(279, 175, 2, 4, '#3cff7a');
+  for (const [x, y, c] of GB) { P_(x, y + 1, 1, 1, '#3a3050'); a.globalAlpha = .55 + .45 * sin(t * 3 + x); P_(x - 1, y + 2, 3, 3, AX[c].c); P_(x, y + 2, 1, 1, '#ffffff'); a.globalAlpha = 1; }
   P_(370, 79, 2, 2, hs(floor(t * 9), 1) < .5 ? '#3cff7a' : '#0c3a1c');
   for (let j = 0; j < 22; j++) { const hw = j < 11 ? j * .5 | 0 : (21 - j) * .5 | 0; P_(358 - hw, 119 + j, hw * 2 + 1, 1, j < 11 ? mix(ac, '#ffffff', .4) : ac); }
   a.globalAlpha = .6 + .4 * sin(t * 2); P_(70, 196, 1, 1, '#ffffff'); P_(64, 206, 1, 1, '#ffffff'); a.globalAlpha = 1;
@@ -943,15 +951,20 @@ const present = () => {
   VX.setTransform(1, 0, 0, 1, ox, oy);
   VX.drawImage(sc, 0, 0, FW, FH); anim(); VX.drawImage(AC, 0, 0, FW, FH);
   // la luz de la pantalla tiñe el cuarto con tu color
-  VX.globalCompositeOperation = 'lighter'; let g = VX.createRadialGradient(SX + W / 2, SY + H / 2, 200, SX + W / 2, SY + H / 2, 1000);
-  g.addColorStop(0, AX[q].c + '30'); g.addColorStop(1, AX[q].c + '00'); VX.fillStyle = g; VX.fillRect(-ox, -oy, cw, ch); VX.globalCompositeOperation = 'source-over';
+  // penumbra: el cuarto se oscurece lejos de la pantalla
+  let g = VX.createRadialGradient(SX + W / 2, SY + H / 2, 360, SX + W / 2, SY + H / 2, 1100); g.addColorStop(0, '#07031400'); g.addColorStop(1, '#070314c8'); VX.fillStyle = g; VX.fillRect(-ox, -oy, cw, ch);
+  VX.globalCompositeOperation = 'lighter'; g = VX.createRadialGradient(SX + W / 2, SY + H / 2, 200, SX + W / 2, SY + H / 2, 1000);
+  g.addColorStop(0, AX[q].c + '30'); g.addColorStop(1, AX[q].c + '00'); VX.fillStyle = g; VX.fillRect(-ox, -oy, cw, ch);
+  VX.save(); VX.translate(SX + W / 2, 830); VX.scale(1, .2); g = VX.createRadialGradient(0, 0, 0, 0, 0, 620); g.addColorStop(0, AX[q].c + '26'); g.addColorStop(1, AX[q].c + '00'); VX.fillStyle = g; VX.fillRect(-700, -700, 1400, 1400); VX.restore();
+  for (const [x, y, c] of GB) lt(VX, AX[c].c, x * 4 + 2, y * 4 + 14, 26, .3 + .25 * sin(t * 3 + x));
+  VX.globalCompositeOperation = 'source-over';
   // pantalla CRT: esquinas redondeadas, líneas de escaneo, viñeta y reflejo del vidrio
   VX.save(); VX.beginPath(); VX.roundRect(SX, SY, W, H, 26); VX.clip();
   VX.drawImage(GSC, SX, SY); VX.fillStyle = SCP; VX.fillRect(SX, SY, W, H);
   g = VX.createRadialGradient(SX + W / 2, SY + H / 2, H * .45, SX + W / 2, SY + H / 2, W * .62); g.addColorStop(0, '#00000000'); g.addColorStop(1, '#00000066'); VX.fillStyle = g; VX.fillRect(SX, SY, W, H);
   g = VX.createLinearGradient(SX, SY, SX + W * .5, SY + H); g.addColorStop(0, '#ffffff14'); g.addColorStop(.4, '#ffffff05'); g.addColorStop(.41, '#ffffff00'); VX.fillStyle = g; VX.fillRect(SX, SY, W, H);
   VX.restore();
-  X = VX; tx('AXIOMI', 768, 677, '#d8ccff', 2.4, 1); tx('CREADO POR RICARDIOUS', 768, 726, '#4a3f7a', 1.5, 1);
+  X = VX; tx('AXIOMI', 768, 705, '#d8ccff', 2.2, 1); tx('CREADO POR RICARDIOUS', 768, 739, '#4a3f7a', 1.5, 1);
 };
 reset(); rsz();
 requestAnimationFrame(loop);
