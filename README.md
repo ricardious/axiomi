@@ -36,7 +36,7 @@ Funcionan como **llave y puerta**: toca un cristal y tu luz toma su color. **Las
 Al final de cada mundo que gira (el primero a unos 60 m, luego cada ~150 m) hay una cámara con un **Guardián** que sella la salida. No se le dispara: se le vence con el color.
 
 - Su **coraza** tiene un color. Si lo tocas con otro, te quema luz y te rebota.
-- Toca el **cristal de su color** (la flecha lo señala) y **embístelo**: atraviesas la coraza y golpeas el núcleo. Con su color encima, él huye: gira el mundo para caerle encima.
+- Toca el **cristal de su color** (la flecha lo señala) y **embístelo**: atraviesas la coraza y golpeas el núcleo. Al tomar su color se asusta y se queda paralizado un momento; después retrocede despacio.
 - Tras cada golpe **cambia de color** y se vuelve más rápido. Lanza **brasas** de su color; las de tu color no te hacen nada.
 - Mientras peleas, **la Sombra espera** y la luz se gasta a la mitad. Al vencerlo se abre la salida, recuperas luz y la Sombra retrocede.
 

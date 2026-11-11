@@ -531,15 +531,16 @@ const upd = dt => {
     const dx = p.x - b.x, dy = p.y - b.y, d = hypot(dx, dy) || 1;
     if (!b.a && d < 90) { b.a = 1; b.k = (q + ri(1, 3)) % 4; vY = min(vY, b.oy - 150); bn = ban = 0; sh = 3; sfx('bh'); }
     if (ba = b.a) {
-      b.c -= dt;
-      const v = (26 + b.lv * 5 + (b.hm - b.h) * 6) * (q == b.k ? -.7 : 1); // te persigue; si llevas su color, huye
+      b.c -= dt; b.z -= dt;
+      if (q == b.k && b.pq != q) b.z = 1.5; b.pq = q; // al tomar su color se asusta y queda paralizado un momento
+      const v = (26 + b.lv * 5 + (b.hm - b.h) * 6) * (q == b.k ? b.z > 0 ? 0 : -.25 : 1); // te persigue; si llevas su color, retrocede despacio
       b.vx = lp(b.vx, dx / d * v, dt * 2); b.vy = lp(b.vy, dy / d * v, dt * 2); b.x += b.vx * dt; b.y += b.vy * dt;
       const ex = b.x - b.ox, ey = b.y - b.oy, e = hypot(ex, ey); if (e > 46) { b.x = b.ox + ex / e * 46; b.y = b.oy + ey / e * 46; }
       // dispara brasas de su color: las de tu color no te hacen nada
       if ((b.f -= dt) < 0) { b.f = max(1.3, 2.4 - b.lv * .2); b.s.push([b.x, b.y, dx / d * 80, dy / d * 80, 3.5, b.k]); sfx('lp'); }
       for (const s of b.s) { s[0] += s[2] * dt; s[1] += s[3] * dt; s[4] -= dt; if (s[5] != q && hypot(s[0] - p.x, s[1] - p.y) < p.r + 3) { s[4] = 0; if (!sv()) { L -= 8 * .6 ** UP[11]; sh = 3; sfx('hu'); burst(p.x, p.y, '#ff2e55', 8, 70); } } }
       b.s = b.s.filter(s => s[4] > 0);
-      if (d < 15 + p.r && b.c < 0) {
+      if (d < 15 + p.r + (q == b.k ? 6 : 0) && b.c < 0) { // con su color la zona de golpe es más amplia
         b.c = .7; p.vx = dx / d * 300; p.vy = dy / d * 300; sh = 4;
         if (q == b.k) {
           b.h = max(0, b.h - 1 - UP[9]); L = min(LM, L + 15); score += 100; fl = .3; burst(b.x, b.y, AX[q].c, 30, 150); sfx('bh'); b.k = (q + ri(1, 3)) % 4; b.s = [];
@@ -707,7 +708,7 @@ const draw = () => {
   // el Guardián: coraza del color que hay que llevar, ojo que te sigue, brasas y el sello de la salida
   const bo = BO, bc = !bo.a ? '#8a84b8' : bo.c > 0 && t % .1 < .05 ? '#ffffff' : AX[bo.k].c;
   if (bo.h > 0 && abs(bo.y - camy) < VR) {
-    const bx = round(bo.x), by = round(bo.y + sin(t * 3) * 2), an = Math.atan2(p.y - bo.y, p.x - bo.x),
+    const bx = round(bo.x + (bo.z > 0 ? sin(t * 60) * 2 : 0)), by = round(bo.y + sin(t * 3) * 2), an = Math.atan2(p.y - bo.y, p.x - bo.x),
       dk = (r, c, x = bx, y = by) => { for (let j = -r; j <= r; j++) { const w = round(sqrt(r * r - j * j)); fr(x - w, y + j, w * 2 + 1, 1, c); } };
     for (let x = -bo.sw; x < bo.sw; x += 4) fr(round(bo.sx + x), bo.sy - 3 + (x / 4 + floor(t * 8) & 1), 3, 5, bc);
     dk(15, bc); dk(13, bo.a ? AX[bo.k].k : '#1a1626');
