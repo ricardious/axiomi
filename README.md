@@ -61,11 +61,13 @@ Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos**, 
 
 ## Biomas
 
-Cada ~70 m el pozo cambia de escenario. Se alternan mundos **orgánicos** (túneles de roca) y **geométricos** (salas cuadradas y pasillos rectos). En los geométricos **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse: grutas → ruinas → bosque hongo → cubos → geoda → abismo.
+Cada ~70 m el pozo cambia de escenario. Tras las grutas llegan los dos mundos alegres y luego se alternan los demás: grutas → laguna → jardín → ruinas → bosque hongo → cubos → geoda → abismo. En los geométricos (ruinas y cubos) **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse.
 
 | Bioma | Cómo es |
 |---|---|
 | **GRUTAS** | túneles y cámaras de roca con hierba y raíces |
+| **LAGUNA** | todo bajo el agua: caes despacio, **cada salto es una brazada** y la criatura cambia de forma, con aletas y cola de pez. Algas, burbujas y más luz |
+| **JARDÍN** | cavernas luminosas de tierra con pasto, flores de colores, enredaderas y pétalos que caen |
 | **BOSQUE HONGO** | cavernas abiertas con hongos gigantes que sirven de plataforma, esporas y lianas |
 | **GEODA** | cámaras de paredes facetadas con cristales que brotan de los muros |
 | **ABISMO** | un vacío enorme con islas flotantes (algunas de color) por el que caes |
