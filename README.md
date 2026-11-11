@@ -1,5 +1,7 @@
 # AXIOMI
 
+[![AXIOMI: gira el mundo, cambia sus reglas. Juega gratis en tu navegador](portada.png)](https://ricardious.github.io/axiomi/)
+
 Creado por **ricardious**.
 
 Arcade experimental en pixel art: **giras el mundo** para mover a una pequeña criatura de luz por cuevas oscuras sin fondo: pozos, túneles horizontales, cámaras y cuevas laterales. Girar el mundo cambia hacia dónde cae la gravedad; tocar un **cristal** tiñe tu luz de su color y te deja atravesar las barreras de ese color.
@@ -37,6 +39,19 @@ Al final de cada mundo que gira (el primero a unos 60 m, luego cada ~150 m) hay 
 - Toca el **cristal de su color** (la flecha lo señala) y **embístelo**: atraviesas la coraza y golpeas el núcleo. Con su color encima, él huye: gira el mundo para caerle encima.
 - Tras cada golpe **cambia de color** y se vuelve más rápido. Lanza **brasas** de su color; las de tu color no te hacen nada.
 - Mientras peleas, **la Sombra espera** y la luz se gasta a la mitad. Al vencerlo se abre la salida, recuperas luz y la Sombra retrocede.
+
+### Mejoras
+
+Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos** (`←` / `→`, o toca el lado). Se acumulan durante la partida, así que cada descenso arma una criatura distinta.
+
+| Mejora | Efecto |
+|---|---|
+| **LUZ AMPLIA** | +25 de luz máxima |
+| **DOBLE SALTO** | un salto más en el aire |
+| **ESCUDO** | te salva de un golpe (púa, coraza o brasa) |
+| **IMÁN** | recoges semillas desde más lejos |
+| **LUZ LENTA** | tu luz se gasta menos |
+| **SOMBRA LENTA** | la Sombra baja más lento |
 
 ## Biomas
 

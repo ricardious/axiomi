@@ -71,6 +71,10 @@ const AX = [
   { n: 'VERDE', c: '#7dff5a', k: '#245a10', h: 'ATRAVIESAS LO VERDE - EL TIEMPO SE FRENA' }
 ];
 
+// mejoras: al vencer a un Guardián eliges una entre dos (se acumulan durante la partida)
+const UN = ['LUZ AMPLIA', 'DOBLE SALTO', 'ESCUDO', 'IMAN', 'LUZ LENTA', 'SOMBRA LENTA'],
+  UD = ['+25 DE LUZ MAXIMA', 'UN SALTO MAS EN EL AIRE', 'TE SALVA DE UN GOLPE', 'RECOGES SEMILLAS DE LEJOS', 'TU LUZ SE GASTA MENOS', 'LA SOMBRA BAJA MAS LENTO'];
+
 // ---------- audio ----------
 let A, MG, DL, NB;
 const au = () => {
@@ -137,7 +141,7 @@ const mus = dt => {
 // materia: 0 aire · 1 roca · 2..5 materia del axioma 0..3
 let st = 'title', t = 0, th = 0, ca = 0, rv = 0, q = 0, pq = 0, E = [], P = [], p = {}, L = 100, score = 0, cr = 0, depth = 0,
   vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
-let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], CY = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0, BO = 0; // BO: el Guardián (jefe) de la próxima sala de jefe
+let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], CY = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0, BO = 0, UP = [], LM = 100, aj = 0, sdn = 0, iv = 0, ch = 0; // BO: el Guardián (jefe) de la próxima sala de jefe
 // biomas: cada 5 filas de salas el pozo cambia de escenario
 // se alternan mundos orgánicos (túneles de roca) y geométricos (salas cuadradas)
 const BN = ['GRUTAS', 'BOSQUE HONGO', 'GEODA', 'ABISMO', 'RUINAS', 'CUBOS'], BI = ry => ry < 5 ? 0 : [4, 1, 5, 2, 3, 0][floor((ry - 5) / 5) % 6];
@@ -445,7 +449,7 @@ const reset = () => {
   while (gr < 5) gen();
   const R0 = room(2, 0);
   p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
-  th = ca = rv = 0; q = pq = 0; L = 100; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
+  th = ca = rv = 0; q = pq = 0; L = LM = 100; UP = [0, 0, 0, 0, 0, 0]; aj = sdn = iv = ch = 0; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
   pbi = bn = 0; DM = [...Array(46)].map(() => ({ x: rr(0, U), y: rr(0, V), ph: rnd() * 7, s: rnd() < .3 ? 2 : 1 }));
 };
 const start = () => { reset(); st = 'play'; t = 0; ban = 2.2; S.n++; save(); sfx('go'); };
@@ -506,13 +510,16 @@ const upd = dt => {
   const c_ = cos(th), s_ = sin(th), svx = p.vx * c_ - p.vy * s_;
   if (abs(svx) > 18) p.f = svx > 0 ? 1 : -1;
   if (p.g > 0) p.ph += abs(svx) * dt * .16;
-  if ((jb -= dt) > 0 && p.g > 0) {
+  if (p.g > 0) aj = UP[1]; // los saltos en el aire se recargan al pisar
+  if ((jb -= dt) > 0 && (p.g > 0 || aj-- > 0)) {
     const js = q == 1 ? 375 : 255, gx = sin(th), gy = cos(th), vg = p.vx * gx + p.vy * gy;
     p.vx -= gx * (vg + js); p.vy -= gy * (vg + js); p.g = 0; jb = 0; sfx('jp');
     burst(p.x + gx * 5, p.y + gy * 5, '#fff4d0', 6, 45);
   }
   // el Guardián: despierta al entrar en su cámara. Tiene una coraza de color: con otro color te quema la luz;
   // con el suyo la atraviesas y golpeas el núcleo. Tras cada golpe cambia de color. Mientras peleas, la Sombra espera.
+  // escudo: absorbe un golpe (púa, coraza o brasa) y te deja un momento a salvo
+  const sv = () => sdn > 0 && (sdn--, iv = 1.5, fl = .3, sfx('sw'), burst(p.x, p.y, '#ffffff', 24, 130), 1); iv -= dt;
   const b = BO; let ba = 0;
   if (b) b.w -= dt;
   if (b.h > 0) {
@@ -525,31 +532,31 @@ const upd = dt => {
       const ex = b.x - b.ox, ey = b.y - b.oy, e = hypot(ex, ey); if (e > 46) { b.x = b.ox + ex / e * 46; b.y = b.oy + ey / e * 46; }
       // dispara brasas de su color: las de tu color no te hacen nada
       if ((b.f -= dt) < 0) { b.f = max(1.3, 2.4 - b.lv * .2); b.s.push([b.x, b.y, dx / d * 80, dy / d * 80, 3.5, b.k]); sfx('lp'); }
-      for (const s of b.s) { s[0] += s[2] * dt; s[1] += s[3] * dt; s[4] -= dt; if (s[5] != q && hypot(s[0] - p.x, s[1] - p.y) < p.r + 3) { s[4] = 0; L -= 8; sh = 3; sfx('hu'); burst(p.x, p.y, '#ff2e55', 8, 70); } }
+      for (const s of b.s) { s[0] += s[2] * dt; s[1] += s[3] * dt; s[4] -= dt; if (s[5] != q && hypot(s[0] - p.x, s[1] - p.y) < p.r + 3) { s[4] = 0; if (!sv()) { L -= 8; sh = 3; sfx('hu'); burst(p.x, p.y, '#ff2e55', 8, 70); } } }
       b.s = b.s.filter(s => s[4] > 0);
       if (d < 15 + p.r && b.c < 0) {
         b.c = .7; p.vx = dx / d * 300; p.vy = dy / d * 300; sh = 4;
         if (q == b.k) {
-          b.h--; L = min(100, L + 15); score += 100; fl = .3; burst(b.x, b.y, AX[q].c, 30, 150); sfx('bh'); b.k = (q + ri(1, 3)) % 4; b.s = [];
-          if (!b.h) { score += 400 * (b.lv + 1); L = min(100, L + 30); vY -= 250; sh = 6; b.w = 3; ban = 0; burst(b.x, b.y, '#ffffff', 60, 220); sfx('go'); } // vencido: se abre la salida y la Sombra retrocede
-        } else { L -= 18; sfx('hu'); burst(p.x, p.y, '#ff2e55', 12, 90); }
+          b.h--; L = min(LM, L + 15); score += 100; fl = .3; burst(b.x, b.y, AX[q].c, 30, 150); sfx('bh'); b.k = (q + ri(1, 3)) % 4; b.s = [];
+          if (!b.h) { score += 400 * (b.lv + 1); L = min(LM, L + 30); vY -= 250; sh = 6; b.w = 3; ban = 0; burst(b.x, b.y, '#ffffff', 60, 220); sfx('go'); const a = ri(0, 5); ch = [a, (a + ri(1, 5)) % 6]; st = 'pick'; ot = 0; } // vencido: se abre la salida y la Sombra retrocede
+        } else if (!sv()) { L -= 18; sfx('hu'); burst(p.x, p.y, '#ff2e55', 12, 90); }
       }
     }
   }
   // la luz: se gasta siempre, más al girar y más cuanto más hondo (la mitad durante la pelea)
-  L -= dt * (3.6 + abs(dth / dt) * 1.2) * (1 + depth / 480) * (q == 2 ? .8 : 1) * (ba ? .5 : 1);
+  L -= dt * (3.6 + abs(dth / dt) * 1.2) * (1 + depth / 480) * (q == 2 ? .8 : 1) * (ba ? .5 : 1) * .85 ** UP[4];
   // cristales: al tocarlos tu luz toma su color
   for (const [x, y, k] of CY) if (k != q && hypot(x - p.x, y - p.y) < p.r + 16) { q = pq = k; fl = .25; ban = 2; sfx('sw'); burst(x, y, AX[k].c, 20, 110); }
   near(R => {
-    for (const [x, y, nx, ny] of R.sp) if (hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) die('TE PINCHASTE');
+    for (const [x, y, nx, ny] of R.sp) if (iv < 0 && hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) { if (sv()) { p.vx = nx * 260; p.vy = ny * 260; } else die('TE PINCHASTE'); }
     for (const l of R.lp) if (l[2] > 0 && hypot(l[0] - p.x, l[1] + 6 - p.y) < 52) {
-      const [x, y] = l, g = max(0, min(l[2], 36 * dt, 100 - L)); L += g; l[2] -= g; if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
+      const [x, y] = l, g = max(0, min(l[2], 36 * dt, LM - L)); L += g; l[2] -= g; if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
   });
-  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8) { e.k = 1; L = min(100, L + .4); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
-  for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7) {
-    e.k = 1; cr++; L = min(100, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
+  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8 + UP[3] * 14) { e.k = 1; L = min(LM, L + .4); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
+  for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7 + UP[3] * 14) {
+    e.k = 1; cr++; L = min(LM, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
   // siguiente punto del camino (para la flecha guía)
@@ -557,7 +564,7 @@ const upd = dt => {
   const pj = floor(p.y / 12);
   if (pj > depth) { score += (pj - depth) * 2; depth = pj; }
   // la Sombra cae desde arriba y acelera
-  vY += min(85, 20 + depth * .05) * (fz ? .6 : 1) * (ba ? 0 : 1) * dt; vY = max(vY, p.y - 320);
+  vY += min(85, 20 + depth * .05) * (fz ? .6 : 1) * (ba ? 0 : 1) * .85 ** UP[5] * dt; vY = max(vY, p.y - 320);
   if (p.y - p.r < vY) die('LA SOMBRA TE ALCANZO');
   if (L <= 0) { L = 0; die(ba ? 'EL GUARDIAN TE APAGO' : 'TE QUEDASTE SIN LUZ'); }
   if (L < 25 && (hb -= dt) < 0) { hb = .7; sfx('hb'); }
@@ -723,7 +730,7 @@ const draw = () => {
   for (const [x, y, k] of VC) if (k != q) { const [a, b] = ws(x, y); lt(X, AX[k].c, a + ox, b + oy, 24, .6 + .25 * sin(t * 5)); }
   for (const c of CO) if (c[0] != q && abs(c[1] - camx) < VR && abs(c[2] - camy) < VR) { const [a, b] = ws((c[1] + c[3]) / 2, (c[2] + c[4]) / 2); lt(X, AX[c[0]].c, a + ox, b + oy, max(c[3] - c[1], c[4] - c[2]) * .75, .3 + .12 * sin(t * 6)); }
   X.globalCompositeOperation = 'source-over';
-  if (st == 'play') { spr(p.ph, p.g <= 0, ax.c, t); X.save(); X.translate(round(px + ox), round(py + oy)); X.rotate(th - ca); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
+  if (st[0] == 'p') { spr(p.ph, p.g <= 0, ax.c, t); if (sdn && st == 'play') { const [a, b] = [round(px + ox), round(py + oy)]; ga(.5 + .3 * sin(t * 6)); for (let k = 0; k < 12; k++) fr(a + round(cos(k * PI / 6 + t) * 13), b + round(sin(k * PI / 6 + t) * 13), 1, 1, '#ffffff'); ga(1); } X.save(); X.translate(round(px + ox), round(py + oy)); X.rotate(th - ca); X.scale(p.f, 1); X.drawImage(SPC, -26, -30); X.restore(); }
   const T = bo.a && bo.h > 0 ? q == bo.k ? [bo.x, bo.y] : bo.cy[bo.k] : WP[wi]; // en la pelea la flecha señala el cristal que toca, o al Guardián
   if (st == 'play' && T) {
     const [a, b] = ws(T[0], T[1]), an = Math.atan2(b - py, a - px), dd_ = hypot(a - px, b - py);
@@ -759,7 +766,7 @@ const draw = () => {
   // barra de luz
   const lc = L < 25 && t % .4 < .2 ? '#ff4060' : '#ffe9a8';
   X.lineCap = 'round'; X.lineWidth = 3; X.strokeStyle = '#ffffff22'; X.beginPath(); X.moveTo(12, 13); X.lineTo(108, 13); X.stroke();
-  X.save(); X.shadowColor = lc; X.shadowBlur = 10; X.strokeStyle = lc; X.beginPath(); X.moveTo(12, 13); X.lineTo(12 + 96 * L / 100, 13); X.stroke(); X.restore();
+  X.save(); X.shadowColor = lc; X.shadowBlur = 10; X.strokeStyle = lc; X.beginPath(); X.moveTo(12, 13); X.lineTo(12 + 96 * L / LM, 13); X.stroke(); X.restore();
   txs('LUZ', 116, 10, lc);
   txs(depth + 'M', U - 10, 8, '#ffffff', 3, 2); txs(score + ' PTS', U - 10, 33, '#9ad8ff', 1, 2); txs(BN[pbi], U - 10, 45, '#8a84b8', 1, 2);
   // tu color actual
@@ -774,6 +781,16 @@ const draw = () => {
   else if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); txs(pbi > 3 ? 'EL MUNDO NO GIRA:  < >  CAMINAR' : '< >  GIRA EL MUNDO', U / 2, 140, '#e8e4ff', 1.4, 1); ga(1); }
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
   if (st == 'play' && t > 3 && t < 14 && S.n < 5) { txs('TOCA UN CRISTAL: TU LUZ TOMA SU COLOR', U / 2, V - 58, '#e8e4ff', 1, 1); txs('LAS BARRERAS DE TU COLOR SE ABREN', U / 2, V - 46, '#e8e4ff', 1, 1); }
+  if (st == 'pick') { // elige una mejora: izquierda o derecha
+    ga(.72); fr(0, 0, U, V, '#05040b'); ga(1);
+    txs('GUARDIAN VENCIDO', U / 2, 30, '#ffd75e', 3, 1); txs('ELIGE UNA MEJORA', U / 2, 62, '#e8e4ff', 1.4, 1);
+    ch.forEach((k, i) => {
+      const x = U / 2 + (i ? 112 : -112), c = AX[i].c;
+      fr(x - 100, 96, 200, 84, c); fr(x - 98, 98, 196, 80, '#0b0916');
+      txs(UN[k], x, 112, c, 2, 1); txs(UD[k], x, 140, '#e8e4ff', 1, 1); txs(UP[k] ? 'YA TIENES ' + UP[k] : 'NUEVA', x, 158, '#8a84b8', 1, 1);
+      if (ot > .5 && t % 1 < .7) txs(i ? '>' : '<', x, 192, '#ffffff', 3, 1);
+    });
+  }
   if (st == 'over') {
     txs('APAGADO', U / 2, 50, '#ff6080', 4, 1);
     txs(why, U / 2, 86, '#e8e4ff', 1, 1);
@@ -786,11 +803,13 @@ const draw = () => {
 
 // ---------- entrada ----------
 const K = {};
-const act = () => { au(); if (st == 'play') jb = .12; else if (st == 'title' || ot > .4) start(); };
+const pick = i => { if (ot < .5) return; const k = ch[i]; UP[k]++; if (!k) L = LM += 25; if (k == 2) sdn++; st = 'play'; sfx('go'); };
+const act = () => { au(); if (st == 'play') jb = .12; else if (st != 'pick' && (st == 'title' || ot > .4)) start(); };
 onkeydown = e => {
   au(); K[e.code] = 1;
   if (/Arrow|Space/.test(e.code)) e.preventDefault();
   if (!e.repeat && /Space|ArrowUp|KeyW|Enter/.test(e.code)) act();
+  if (st == 'pick' && /Left|Right|KeyA|KeyD/.test(e.code)) pick(/Right|KeyD/.test(e.code) ? 1 : 0);
   if (e.code == 'KeyF') { S.f = !frOn(); save(); rsz(); }
   if (e.code == 'KeyM') { S.m ^= 1; save(); if (MG) MG.gain.value = S.m ? 0 : .5; }
 };
@@ -798,7 +817,7 @@ onkeyup = e => K[e.code] = 0;
 let pd = 0;
 cv.onpointerdown = e => { au(); pd = { x: e.clientX, x0: e.clientX, m: 0 }; };
 onpointermove = e => { if (!pd) return; const dx = (e.clientX - pd.x) * W / cv.clientWidth; pd.x = e.clientX; pd.m += abs(dx); if (st == 'play') drag += dx * .015; };
-onpointerup = () => { if (pd && pd.m < 4) act(); pd = 0; };
+onpointerup = e => { if (pd && pd.m < 4) st == 'pick' ? pick(e.clientX > innerWidth / 2 ? 1 : 0) : act(); pd = 0; };
 
 // ---------- bucle ----------
 let t0 = 0;
