@@ -144,7 +144,7 @@ let st = 'title', t = 0, th = 0, ca = 0, rv = 0, q = 0, pq = 0, E = [], P = [], 
   vY = 0, camx = 0, camy = 0, sh = 0, fl = 0, ban = 0, ot = 0, jb = 0, drag = 0, why = '', hb = 0, rec = 0, lpT = 0, DM = [];
 let RM = new Map(), CP = [], CO = [], EX = [], WP = [], FL = [], CY = [], gr = 0, pc = 2, pdx = 0, pdr = 0, wi = 0, pbi = 0, bn = 0, BO = 0, UP = [], LM = 100, aj = 0, sdn = 0, iv = 0, ch = 0, wt = 0, wm = 0, BQ = [], dkf = 1; // BO: el Guardián (jefe) de la próxima sala de jefe
 // biomas: cada 5 filas de salas el pozo cambia de escenario
-// se alternan mundos orgánicos (túneles de roca) y geométricos (salas cuadradas)
+// grutas y geoda son cuevas (túneles en la roca); los mundos de la naturaleza son al aire libre (salones con suelo); ruinas y cubos, salas cuadradas
 // 6 LAGUNA: todo bajo el agua, se nada · 7 JARDIN: luminoso, con pasto, flores y enredaderas (los dos giran)
 // 8 CIELO: alas, planeas · 9 NIEVE: bufanda, resbalas · 10 DULCE: burbuja, rebotas
 const BN = ['GRUTAS', 'BOSQUE HONGO', 'GEODA', 'ABISMO', 'RUINAS', 'CUBOS', 'LAGUNA', 'JARDIN', 'CIELO', 'NIEVE', 'DULCE'],
@@ -160,10 +160,10 @@ const cap = (a, b, ra, rb, oc) => CP.push([a[0], a[1], ra, b[0], b[1], rb, min(a
 const fil = (m, ty, a, bb) => FL.push([...bb, ty, m, ...a]);
 // conecta cada salida con el centro de la sala mediante un túnel curvo
 // tr: además deja un rastro de chispas por el centro del túnel que marca el camino
-const carve = (R, ex, rc, tr, oc) => {
+const carve = (R, ex, rc, tr, oc, nw) => {
   const c = R.c;
   for (const [x, y, r] of ex) {
-    const dx = c[0] - x, dy = c[1] - y, l = hypot(dx, dy) || 1, j = rr(-.3, .3) * l, m = [x + dx / 2 - dy / l * j, y + dy / 2 + dx / l * j], rm = (r + rc) / 2;
+    const dx = c[0] - x, dy = c[1] - y, l = hypot(dx, dy) || 1, j = rr(-.3, .3) * l, m = [x + dx / 2 - dy / l * j, y + dy / 2 + dx / l * j], rm = nw ? r : (r + rc) / 2; // nw: al aire libre la bajada es un pozo angosto (si se ensancha, rodea la barrera del hueco)
     cap([x, y], m, r, rm, oc); cap(m, c, rm, rc, oc); R.sd.push(m); EX.push([x, y]); R.ax.push([x, y, ...m], [...m, ...c]);
     if (tr) for (const [a, b_] of [[[x, y], m], [m, c]]) for (let k = 0, n = hypot(b_[0] - a[0], b_[1] - a[1]) / 30 | 0; k < n; k++) E.push({ x: lp(a[0], b_[0], k / n), y: lp(a[1], b_[1], k / n), ph: k, s: 1 });
   }
@@ -192,29 +192,33 @@ const seg = (a, b) => [...Array(9)].map((_, k) => [lp(a[0], b[0], k / 8), lp(a[1
 // cristal (llave) sobre el eje del túnel que lleva a la salida (x, y), a 40 px de ella
 const kp = (R, x, y, k) => { const a = R.ax.find(a => a[0] == x && a[1] == y), l = hypot(a[2] - x, a[3] - y) || 1, f = min(40, l * .8) / l; return [x + (a[2] - x) * f, y + (a[3] - y) * f, k]; };
 const gen = () => {
-  const ry = gr++, oy = ry * RH, d = min(1, ry / 45), Rs = [], bi = BI(ry), big = bi & 1 || bi == 8, bs = ry % 10 == 4; // bosque y abismo son abiertos · bs: sala del Guardián (siempre en un mundo que gira)
+  const ry = gr++, oy = ry * RH, d = min(1, ry / 45), Rs = [], bi = BI(ry), big = bi & 1 || bi == 8, bs = ry % 10 == 4, op = bi > 5 || bi == 1 || bi == 3, ff = bi == 3 && !bs, HL = []; // bosque y abismo son abiertos · bs: sala del Guardián (siempre en un mundo que gira) · op: al aire libre
   for (let i = 0; i < NC; i++) {
     const R = { rx: i, ry, bi, ox: i * RW, oy, k: 0, sd: [], ax: [], img: [], ux: -1e3, c: [i * RW + RW / 2 + rr(-60, 60), oy + RH / 2 + rr(-38, 38)] };
     Rs.push(R); RM.set(ry * 8 + i, R);
   }
+  // al aire libre (no cueva): cada fila es un gran salón de lado a lado con un suelo grueso abajo; el techo es el suelo de la fila de arriba
+  if (op) for (let k = 0; k <= 10; k++) { const y = ff ? oy + 88 : oy + rr(60, 80), r = ff ? 98 : rr(46, min(y - oy - 6, oy + 140 - y)); HL.push([y, r]); /* ff: caída libre, la fila entera es aire */ if (k) cap([k * 128 - 128, HL[k - 1][0]], [k * 128, y], HL[k - 1][1], r); }
+  const hl = x => { const k = min(9, x / 128 | 0), u = x / 128 - k, [a, b] = HL[k], [c, d] = HL[k + 1]; return [lp(a - b, c - d, u), lp(a + b, c + d, u)]; }; // techo y suelo del salón en x
   const c = pc, c2 = ry && !bs && rnd() < .8 ? cl(c + pk([-3, -2, -1, -1, 1, 1, 2, 3]), 0, NC - 1) : c, lo = min(c, c2), hi = max(c, c2), hb_ = [];
   // en los mundos quietos (geométricos) los pasillos van pegados al suelo, a una altura que se puede subir de un salto
   const fx = bi >> 1 == 2;
   for (let i = lo; i < hi; i++) { const r = fx ? bi == 4 ? rr(19, 27) : rr(24, 30) : big ? rr(34, 42) : rr(19, 27); hb_[i] = [(i + 1) * RW, fx ? oy + rr(140, 150) - r : oy + rr(big ? 62 : 52, RH - (big ? 62 : 52)), r]; }
   const dx = c2 * RW + rr(60, RW - 60), dr = bi == 3 ? rr(28, 34) : rr(18, 25);
   if (!ry) Rs[c].c = [c * RW + RW / 2, 76];
-  for (let i = lo; i <= hi; i++) {
-    const R = Rs[i], ex = []; R.k = bs ? 3 : 1; R.lamp = bs || rnd() < .3;
+  for (let i = op && !bs ? 0 : lo; i <= (op && !bs ? NC - 1 : hi); i++) { // al aire libre también se decoran las salas fuera del camino
+    const R = Rs[i], ex = [], pt = i >= lo && i <= hi; if (pt || ff) R.k = bs ? 3 : 1, R.lamp = bs || rnd() < .3; // en la caída libre todas las salas llevan púas
     if (ry && i == c) { ex.push([pdx, oy, pdr]); R.ux = pdx; }
     if (i == c2) ex.push([dx, oy + RH, dr]);
-    if (i > lo) ex.push(hb_[i - 1]);
-    if (i < hi) ex.push(hb_[i]);
+    if (pt && i > lo) ex.push(hb_[i - 1]);
+    if (pt && i < hi) ex.push(hb_[i]);
     if (big && ry) R.c = [R.ox + RW / 2 + rr(-30, 30), oy + RH / 2 + rr(-10, 10)];
+    if (op) { const x = R.ox + RW / 2 + rr(-40, 40), [a, b] = hl(x); R.c = [x, (a + b) / 2]; }
     if (bs) R.c = [R.ox + RW / 2, oy + RH / 2];
-    const rc = bs ? 80 : !ry ? 48 : bi == 1 ? rr(56, 66) : bi == 3 ? rr(70, 78) : bi == 6 ? rr(34, 46) : bi == 7 ? rr(46, 58) : bi == 8 ? rr(56, 66) : bi > 8 ? rr(36, 50) : rr(24, 46), vx = e => e[1] == oy || e[1] == oy + RH, gb = bi >> 1 == 2,
+    const rc = bs ? op ? 60 : 80 : !ry ? 48 : op ? rr(30, 50) : rr(24, 46), vx = e => e[1] == oy || e[1] == oy + RH, gb = bi >> 1 == 2,
       cf = oy + rr(132, 150), hh = bi == 4 ? rr(26, 40) : min(rr(52, 62), (cf - oy - 10) / 2), hw = rr(bi == 4 ? 10 : 4, (bi == 4 ? 74 : 92) - hh);
     if (gb) { R.c = [R.ox + RW / 2 + rr(-1, 1) * (bi == 4 ? 40 : 24), cf - hh]; carveB(R, ex, hw, hh, ry, cf); }
-    else carve(R, ex, rc, ry, bi == 2);
+    else carve(R, ex, rc, ry, bi == 2, op);
     if (bs) { // el Guardián: una cámara grande con los cuatro cristales alrededor y la salida sellada hasta vencerlo
       const [x, y] = R.c, cy = [0, 1, 2, 3].map(k => [x + cos(k * PI / 2 + PI / 4) * 57, y + sin(k * PI / 2 + PI / 4) * 57, k]), lv = (ry - 4) / 10, hm = min(5, 2 + lv);
       CY.push(...cy); BO = { x, y, ox: x, oy: y, vx: 0, vy: 0, k: 0, h: hm, hm, lv, a: 0, c: 0, f: 2, w: 0, s: [], cy, sx: dx, sw: dr + 20, sy: oy + RH };
@@ -232,12 +236,13 @@ const gen = () => {
       if (ry > 1 && rnd() < .3) CO.push([ri(0, 3), x, y, x + w, y + h]); else fil(1, 2, [], [x, y, x + w, y + h]);
       if (rnd() < .4) E.push({ x: x + w / 2, y: y - 8, ph: rnd() * 6 });
     }
-    if (bi == 1) for (let n = 12, put = 0; n-- && put < 3;) { // hongos gigantes: tallo y sombrero, sirven de plataforma
-      const x = R.ox + rr(36, RW - 36), cy = R.c[1] + rr(-15, 35), rx = rr(20, 36), r_ = rr(7, 11), tx = x + rr(-10, 10);
-      if (ex.some(e => vx(e) ? abs(e[0] - x) < e[2] + rx + 12 : hypot(e[0] - tx, e[1] - cy) < e[2] + rx + 10) || !clr(R, [...ring(tx, cy, rx + 2, r_ + 2), ...seg([x, oy + RH - 2], [tx, cy])], 22)) continue;
+    if (op && bi != 3 && bi != 8) for (let n = 12, put = 0; n-- && put < 3;) { // crecen del suelo: hongos gigantes, corales, árboles, pinos nevados o paletas; sirven de plataforma
+      const x = R.ox + rr(30, RW - 30), [t_, f_] = hl(x), pn = bi == 9, tx = x + (bi == 1 ? rr(-10, 10) : 0), rx = bi == 1 ? rr(20, 36) : bi == 10 ? rr(9, 15) : pn ? rr(10, 15) : rr(15, 26), r_ = bi == 1 ? rr(7, 11) : bi == 10 ? rx : rx * .75,
+        cy = pn ? f_ - 4 : lp(t_, f_, rr(.3, .55)), tp = cy - rr(36, 60);
+      if (ex.some(e => vx(e) ? abs(e[0] - x) < e[2] + rx + 12 : hypot(e[0] - tx, e[1] - cy) < e[2] + rx + 10) || !clr(R, pn ? [[x - rx, cy], [x + rx, cy], ...seg([x, cy], [x, tp])] : [...ring(tx, cy, rx + 2, r_ + 2), ...seg([x, f_], [tx, cy])], 22)) continue;
       put++;
-      fil(6, 0, [x, oy + RH - 2, 6, tx, cy, 4], [min(x, tx) - 8, cy - 8, max(x, tx) + 8, oy + RH]);
-      fil(6, 1, [tx, cy, rx, r_, 1], [tx - rx - 3, cy - r_ - 3, tx + rx + 3, cy + r_ + 3]);
+      if (pn) fil(6, 0, [x, cy + 8, rx, x, tp, 1], [x - rx - 2, tp - 2, x + rx + 2, cy + 20]); // pino: un cono
+      else { const sw = bi == 10 ? 2.5 : bi == 1 ? 6 : 4; fil(6, 0, [x, f_ + 12, sw, tx, cy, sw * .7], [min(x, tx) - 8, cy - 8, max(x, tx) + 8, f_ + 20]); fil(6, 1, [tx, cy, rx, r_, bi == 1], [tx - rx - 3, cy - r_ - 3, tx + rx + 3, cy + r_ + 3]); }
     }
     if (bi == 2) for (let n = ri(4, 7); n--;) { // cristales que brotan de las paredes de la geoda
       const a = rnd() * 7;
@@ -246,12 +251,12 @@ const gen = () => {
       if (!clr(R, seg(s2, s1), 18)) continue;
       fil(6, 0, [...s1, 6, ...s2, 1], [min(s1[0], s2[0]) - 7, min(s1[1], s2[1]) - 7, max(s1[0], s2[0]) + 7, max(s1[1], s2[1]) + 7]);
     }
-    if (bi == 3 || bi == 8) for (let n = 12, put = 0; n-- && put < 4;) { // islas flotantes en el vacío
-      const rx = rr(16, 34), r_ = rr(7, 12), x = R.ox + rr(rx + 10, RW - rx - 10), y = oy + rr(30, RH - 30);
+    if (bi == 3 || bi == 8) for (let n = ff ? 20 : 12, put = 0; n-- && put < (ff ? 6 : 4);) { // islas flotantes en el vacío (en la caída libre, muchas más para esquivar)
+      const rx = rr(16, 34), r_ = rr(7, 12), x = R.ox + rr(rx + 10, RW - rx - 10), y = lp(...hl(x), ff ? rr(.2, .8) : rr(.3, .6));
       if (ex.some(e => vx(e) && abs(e[0] - x) < e[2] + rx + 12) || !clr(R, ring(x, y, rx + 2, r_ + 2), 22)) continue;
       put++;
       fil(rnd() < .3 ? ri(2, 5) : 1, 1, [x, y, rx, r_, 0], [x - rx - 6, y - r_ - 6, x + rx + 6, y + r_ + 6]);
-      E.push({ x, y: y - r_ - 10, ph: rnd() * 6 });
+      if (!ff || rnd() < .3) E.push({ x, y: y - r_ - 10, ph: rnd() * 6 });
     }
     for (const m of [...R.sd, R.c]) if (ry && rnd() < .3) E.push({ x: m[0] + rr(-8, 8), y: m[1] + rr(-8, 8), ph: rnd() * 6 });
     // islas de materia de color dentro de las cámaras
@@ -261,16 +266,16 @@ const gen = () => {
   for (let i = c, s = c2 > c ? 1 : -1; ; i += s) { WP.push(Rs[i].c); if (i == c2) break; WP.push(hb_[s > 0 ? i : i - 1]); }
   WP.push([dx, oy + RH]);
   // cuevas laterales sin salida, con semillas y a veces una lámpara
-  if (ry && !bs) for (const i of [lo - 1, hi + 1]) if (i >= 0 && i < NC && rnd() < .2) {
+  if (ry && !bs && !op) for (const i of [lo - 1, hi + 1]) if (i >= 0 && i < NC && rnd() < .2) {
     const R = Rs[i], r = rr(17, 22), b = [i < lo ? lo * RW : i * RW, bi >> 1 == 2 ? oy + rr(132, 144) - r : oy + rr(52, RH - 52), r];
     R.k = 2; R.lamp = rnd() < .65;
     if (bi >> 1 == 2) { R.c[1] = b[1] + r - 24; carveB(R, [b], rr(6, 16), 24, 0, b[1] + r); carveB(Rs[i < lo ? lo : hi], [b], 0, 0, 0, b[1] + r); } else { carve(R, [b], rr(22, 34)); carve(Rs[i < lo ? lo : hi], [b], 22); }
     for (let n = 3; n--;) E.push({ x: R.c[0] + rr(-12, 12), y: R.c[1] + rr(-10, 10), ph: rnd() * 6 });
   }
   // barreras de color en las salidas, cada una con su cristal (la llave) justo antes, en el túnel
-  const pl = ry > 1 ? .35 + d * .4 : 0, sg = c2 > c ? 1 : -1;
-  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push([k, x - 5, y - r - 18, x + 5, y + r + 18]); const cc = kp(Rs[sg > 0 ? i : i + 1], x, y, k); if (fx) cc[1] += r - 12; CY.push(cc); }
-  if (!bs && (ry == 1 || ry > 1 && rnd() < pl)) { const k = ry == 1 ? ri(1, 3) : ri(0, 3); CO.push([k, dx - dr - 18, oy + RH - 5, dx + dr + 18, oy + RH + 5]); CY.push(kp(Rs[c2], dx, oy + RH, k)); }
+  const pl = ry > 1 && !ff ? .35 + d * .4 : 0, sg = c2 > c ? 1 : -1;
+  for (let i = lo; i < hi; i++) if (rnd() < pl) { const [x, y, r] = hb_[i], k = ri(0, 3); CO.push(op ? [k, x - 5, oy - 16, x + 5, oy + RH - 2] : [k, x - 5, y - r - 18, x + 5, y + r + 18]); const cc = kp(Rs[sg > 0 ? i : i + 1], x, y, k); if (fx) cc[1] += r - 12; CY.push(cc); }
+  if (!bs && (ry == 1 || ry > 1 && rnd() < pl)) { const k = ry == 1 ? ri(1, 3) : ri(0, 3); CO.push([k, dx - dr - 30, oy + RH - 5, dx + dr + 30, oy + RH + 5]); CY.push(kp(Rs[c2], dx, oy + RH, k)); }
   pc = c2; pdx = dx; pdr = dr;
 };
 
@@ -368,6 +373,7 @@ const rend = (R, qq) => {
   const C = (i, j) => cs[(j + MG_) * pw + i + MG_];
   const B = R.bi, K = [mix(ac, '#ffffff', .35), mix(ac, '#040309', .35), mix(ac, '#040309', .72), R3[B], R4[B], mix(ac, '#040309', .55), mix(ac, '#ffffff', .6), R7[B]].map(c => u32(c));
   const CRY = [mix(ac, '#ffffff', .8), mix(ac, '#ffffff', .15), mix(ac, '#ffffff', .45), mix(ac, '#05040b', .3), mix(ac, '#ffffff', .3)].map(c => u32(c)), MU = ['#f0d8ff', '#9a6cc0', '#7a4f9e', mix(ac, '#ffffff', .4)].map(c => u32(c));
+  const PL = (['ffd0c0 ff7a6a e0505a c84050', 'b0ff88 4cc23e 2f9a36 7a4a2a', , 'eef6ff 2f7a5a 1f5a46 1f5a46', 'ffffff ff4fa0 fff0f8 fff4fa'][B - 6] || '0 0 0 0').split(' ').map(c => u32('#' + c)); // coral, árbol, pino, paleta: borde, tonos, tronco
   const MC = AX.map(a => [mix(a.c, '#05040b', .5), mix(a.c, '#05040b', .3), mix(a.c, '#ffffff', .6), a.c].map(c => u32(c))), GH = AX.map(a => [u32(a.c, 210), u32(a.c, 70)]);
   const SNW = u32('#eef6ff'), ICE = u32('#a8dcff'), GRN = u32(B == 6 ? '#2fd6a0' : B == 10 ? '#ffb3dc' : '#5fe04a'), FW = ['#ff6fa8', '#ffe14f', '#ffffff', '#ff9a3c'].map(c => u32(c)), hp = B == 6 || B == 7 || B == 10; // algas / pasto y flores / glaseado y chispas de colores
   const set = (i, j, c) => { if (i >= 0 && j >= 0 && i < w && j < h) b[j * w + i] = c; };
@@ -399,7 +405,7 @@ const rend = (R, qq) => {
     } else if (c == 4) {
       // hongo gigante (carne lila con manchas que brillan) o cristal facetado
       const e1 = cs[N - 1] != 4 || cs[N + 1] != 4 || cs[N - pw] != 4 || cs[N + pw] != 4;
-      b[n] = B == 2 ? e1 ? CRY[0] : CRY[1 + ((((x_ + y_) >> 2) + ((x_ - y_) >> 3)) & 3)] : e1 ? MU[0] : hs(x_ >> 1, y_ >> 1) < .1 ? MU[3] : x_ % 4 ? MU[1] : MU[2];
+      b[n] = B == 2 ? e1 ? CRY[0] : CRY[1 + ((((x_ + y_) >> 2) + ((x_ - y_) >> 3)) & 3)] : B > 5 ? e1 || B == 9 && cs[N - pw * 2] != 4 ? PL[0] : B != 9 && cs[N - 6] != 4 && cs[N + 6] != 4 ? PL[3] : hs(x_, y_ * 3) < .06 ? B == 7 ? FW[x_ & 3] : PL[0] : (B == 10 ? (x_ + y_) >> 2 & 1 : hs(x_ >> 2, y_ >> 2) < .5) ? PL[1] : PL[2] : e1 ? MU[0] : hs(x_ >> 1, y_ >> 1) < .1 ? MU[3] : x_ % 4 ? MU[1] : MU[2];
     } else {
       // materia de color: sólida con borde brillante y rayas; fantasma con borde a trazos
       const v = mv[N] - 2, df = k => cs[k] != c, e1 = df(N - 1) || df(N + 1) || df(N - pw) || df(N + pw), e2 = df(N - 2) || df(N + 2) || df(N - pw * 2) || df(N + pw * 2);
@@ -473,7 +479,7 @@ const phys = dt => {
   const sx = sin(th), sy = cos(th), r = p.r;
   const gw = wt ? .3 : wm == 2 && p.g <= 0 ? .55 : 1, wk = wt ? 1 - 1.8 * dt : 1; // bajo el agua: poca gravedad y freno · con alas caes más suave
   p.vx = (p.vx + sx * G * gw * dt) * wk; p.vy = (p.vy + sy * G * gw * dt) * wk;
-  if (wm == 2) { const vg = p.vx * sx + p.vy * sy; if (vg > 150) { p.vx -= sx * (vg - 150); p.vy -= sy * (vg - 150); } } // planeas: la caída tiene tope
+  if (wm == 2 || wm == 5) { const vg = p.vx * sx + p.vy * sy, cp = wm == 2 ? 150 : 300; if (vg > cp) { p.vx -= sx * (vg - cp); p.vy -= sy * (vg - cp); } } // planeas: la caída tiene tope (en caída libre, uno alto para alcanzar a esquivar)
   const sp = hypot(p.vx, p.vy); if (sp > MV) { p.vx *= MV / sp; p.vy *= MV / sp; }
   p.x += p.vx * dt; p.y += p.vy * dt;
   let nx = 0, ny = 0, hit = 0;
@@ -506,7 +512,7 @@ const upd = dt => {
   t += dt;
   let dir = (K.ArrowRight || K.KeyD ? 1 : 0) - (K.ArrowLeft || K.KeyA ? 1 : 0);
   // mundos quietos (ruinas y cubos): el mundo vuelve a su sitio y no gira; ← → caminan (en táctil, arrastrar y mantener)
-  const pb = BI(max(0, floor(p.y / RH))), fz = st == 'play' && pb >> 1 == 2, th0 = th; wm = [0, 0, 0, 0, 0, 0, 1, 0, 2, 3, 4][pb]; wt = wm == 1;
+  const pb = BI(max(0, floor(p.y / RH))), fz = st == 'play' && pb >> 1 == 2, th0 = th; wm = [0, 0, 0, 5, 0, 0, 1, 0, 2, 3, 4][pb]; wt = wm == 1;
   if (fz) {
     if (pd && pd.m > 4 && abs(pd.x - pd.x0) > 12) dir = pd.x > pd.x0 ? 1 : -1;
     rv = 0; drag = 0; th = lp(th, round(th / (2 * PI)) * 2 * PI, min(1, dt * 5));
@@ -586,7 +592,7 @@ const upd = dt => {
   while (gr <= pr + 3) gen();
   for (const [k, R] of RM) if (R.ry < pr - 3) RM.delete(k);
   const top = (pr - 3) * RH; CP = CP.filter(c => c[9] > top); CO = CO.filter(c => c[4] > top); FL = FL.filter(f => f[3] > top); CY = CY.filter(c => c[1] > top); EX = EX.filter(e => e[1] > top - 60);
-  camx = lp(camx, p.x, min(1, dt * 8)); camy = lp(camy, p.y, min(1, dt * 8));
+  const la = wm == 5 ? .35 : 0; camx = lp(camx, p.x + p.vx * la, min(1, dt * 8)); camy = lp(camy, p.y + p.vy * la, min(1, dt * 8)); // en caída libre la cámara mira hacia donde caes
   upP(dt); mus(dt);
 };
 
@@ -804,7 +810,7 @@ const draw = () => {
     txs(q == bo.k ? 'EMBISTELO AHORA!' : 'BUSCA EL CRISTAL ' + AX[bo.k].n, U / 2, V - 20, c, 1, 1);
   }
   if (st == 'play' && bo.w > 0) { ga(min(1, bo.w)); txs('GUARDIAN VENCIDO', U / 2, 112, '#ffd75e', 3, 1); txs('LA SOMBRA RETROCEDE', U / 2, 140, '#e8e4ff', 1.4, 1); ga(1); }
-  else if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); txs(pbi >> 1 == 2 ? 'EL MUNDO NO GIRA:  < >  CAMINAR' : ['BAJO EL AGUA: SALTA PARA NADAR', , 'TE SALEN ALAS: CAES PLANEANDO', 'HIELO: TE DESLIZAS', 'EN UNA BURBUJA: REBOTAS'][pbi - 6] || '< >  GIRA EL MUNDO', U / 2, 140, '#e8e4ff', 1.4, 1); ga(1); }
+  else if (bn > 0 && st == 'play') { ga(min(1, bn)); txs(BN[pbi], U / 2, 112, '#ffffff', 3, 1); txs(pbi == 3 ? 'CAIDA LIBRE: GIRA PARA ESQUIVAR' : pbi >> 1 == 2 ? 'EL MUNDO NO GIRA:  < >  CAMINAR' : ['BAJO EL AGUA: SALTA PARA NADAR', , 'TE SALEN ALAS: CAES PLANEANDO', 'HIELO: TE DESLIZAS', 'EN UNA BURBUJA: REBOTAS'][pbi - 6] || '< >  GIRA EL MUNDO', U / 2, 140, '#e8e4ff', 1.4, 1); ga(1); }
   if (ban > 0 && st == 'play') { ga(min(1, ban * 2)); txs(ax.n, U / 2, 44, ax.c, 4, 1); txs(ax.h, U / 2, 72, '#e8e4ff', 1, 1); ga(1); }
   if (st == 'play' && t > 3 && t < 14 && S.n < 5) { txs('TOCA UN CRISTAL: TU LUZ TOMA SU COLOR', U / 2, V - 58, '#e8e4ff', 1, 1); txs('LAS BARRERAS DE TU COLOR SE ABREN', U / 2, V - 46, '#e8e4ff', 1, 1); }
   if (st == 'pick') { // elige una mejora: izquierda o derecha

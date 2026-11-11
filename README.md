@@ -61,7 +61,7 @@ Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos**, 
 
 ## Biomas
 
-Cada ~70 m el pozo cambia de escenario. Siempre empiezas en las grutas, pero **el orden de los demás biomas se sortea en cada partida**: nunca sabes qué viene después. Pasas por todos antes de que alguno se repita, y nunca te toca el mismo dos veces seguidas. En los geométricos (ruinas y cubos) **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse.
+Cada ~70 m el pozo cambia de escenario. Siempre empiezas en las grutas, pero **el orden de los demás biomas se sortea en cada partida**: nunca sabes qué viene después. Pasas por todos antes de que alguno se repita, y nunca te toca el mismo dos veces seguidas. Solo GRUTAS y GEODA son cuevas. Los mundos de la naturaleza son **al aire libre**, y en el ABISMO ni siquiera hay suelo: cada piso es un gran espacio abierto de lado a lado, con suelo abajo y un hueco para seguir bajando, y del suelo crecen hongos, corales, árboles, pinos o paletas que sirven de plataforma. En los geométricos (ruinas y cubos) **el mundo no gira**: la gravedad queda hacia abajo y caminas y saltas, un respiro para no marearse.
 
 En cinco biomas **la criatura se transforma** y cambia cómo te mueves:
 
@@ -75,14 +75,14 @@ En cinco biomas **la criatura se transforma** y cambia cómo te mueves:
 | Bioma | Cómo es |
 |---|---|
 | **GRUTAS** | túneles y cámaras de roca con hierba y raíces |
-| **LAGUNA** | todo bajo el agua: caes despacio, **cada salto es una brazada** y la criatura cambia de forma, con aletas y cola de pez. Algas, burbujas y más luz |
-| **JARDÍN** | cavernas luminosas de tierra con pasto, flores de colores, enredaderas y pétalos que caen |
-| **CIELO** | cielo azul entre nubes enormes, islas de nube flotando y motas blancas en el aire |
-| **NIEVE** | cuevas de hielo con nieve en el suelo, carámbanos colgando y copos que caen |
-| **DULCE** | muros de caramelo a rayas, glaseado rosa que gotea del techo y chispas de azúcar |
-| **BOSQUE HONGO** | cavernas abiertas con hongos gigantes que sirven de plataforma, esporas y lianas |
+| **LAGUNA** | todo bajo el agua: caes despacio, **cada salto es una brazada** y la criatura cambia de forma, con aletas y cola de pez. Fondo marino con corales, algas y burbujas |
+| **JARDÍN** | terrazas de tierra con pasto, flores, árboles frondosos, enredaderas y pétalos que caen |
+| **CIELO** | cielo azul con pisos de nube, islas de nube flotando y motas blancas en el aire |
+| **NIEVE** | laderas nevadas con pinos, carámbanos colgando y copos que caen |
+| **DULCE** | suelo de caramelo a rayas con paletas gigantes, glaseado rosa que gotea y chispas de azúcar |
+| **BOSQUE HONGO** | un bosque de hongos gigantes que sirven de plataforma, esporas y lianas |
 | **GEODA** | cámaras de paredes facetadas con cristales que brotan de los muros |
-| **ABISMO** | un vacío enorme con islas flotantes (algunas de color) por el que caes |
+| **ABISMO** | **caída libre**: no hay suelo, caes varios pisos seguidos por un vacío lleno de islas flotantes (algunas con púas, otras de color) y giras el mundo para esquivarlas. La cámara mira hacia donde caes |
 | **RUINAS** | *(no gira)* templo de ladrillo: salas rectangulares, pasillos rectos, columnas rotas que hay que saltar y arcadas al fondo |
 | **CUBOS** | *(no gira)* grandes salas cuadradas de losetas con bloques flotantes (algunos de color) |
 
