@@ -42,7 +42,7 @@ Al final de cada mundo que gira (el primero a unos 60 m, luego cada ~150 m) hay 
 
 ### Mejoras
 
-Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos** (`←` / `→`, o toca el lado). Se acumulan durante la partida, así que cada descenso arma una criatura distinta.
+Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos**, sorteadas al azar entre doce (`←` / `→`, o toca el lado). Se acumulan durante la partida, así que cada descenso arma una criatura distinta.
 
 | Mejora | Efecto |
 |---|---|
@@ -52,6 +52,12 @@ Al vencer a un Guardián el juego se detiene y **eliges una mejora entre dos** (
 | **IMÁN** | recoges semillas desde más lejos |
 | **LUZ LENTA** | tu luz se gasta menos |
 | **SOMBRA LENTA** | la Sombra baja más lento |
+| **SALTO ALTO** | saltas más alto |
+| **SEMILLA RICA** | las semillas dan más luz |
+| **TESORO** | las semillas valen el doble de puntos |
+| **GARRA** | cada golpe al Guardián cuenta doble |
+| **LÁMPARA VIVA** | las lámparas duran el doble |
+| **PIEL DURA** | el Guardián te quema menos luz |
 
 ## Biomas
 

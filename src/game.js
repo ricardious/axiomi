@@ -72,8 +72,9 @@ const AX = [
 ];
 
 // mejoras: al vencer a un Guardián eliges una entre dos (se acumulan durante la partida)
-const UN = ['LUZ AMPLIA', 'DOBLE SALTO', 'ESCUDO', 'IMAN', 'LUZ LENTA', 'SOMBRA LENTA'],
-  UD = ['+25 DE LUZ MAXIMA', 'UN SALTO MAS EN EL AIRE', 'TE SALVA DE UN GOLPE', 'RECOGES SEMILLAS DE LEJOS', 'TU LUZ SE GASTA MENOS', 'LA SOMBRA BAJA MAS LENTO'];
+const UN = ['LUZ AMPLIA', 'DOBLE SALTO', 'ESCUDO', 'IMAN', 'LUZ LENTA', 'SOMBRA LENTA', 'SALTO ALTO', 'SEMILLA RICA', 'TESORO', 'GARRA', 'LAMPARA VIVA', 'PIEL DURA'],
+  UD = ['+25 DE LUZ MAXIMA', 'UN SALTO MAS EN EL AIRE', 'TE SALVA DE UN GOLPE', 'RECOGES SEMILLAS DE LEJOS', 'TU LUZ SE GASTA MENOS', 'LA SOMBRA BAJA MAS LENTO',
+    'SALTAS MAS ALTO', 'LAS SEMILLAS DAN MAS LUZ', 'LAS SEMILLAS VALEN DOBLE', 'GOLPEAS DOBLE AL GUARDIAN', 'LAS LAMPARAS DURAN EL DOBLE', 'EL GUARDIAN TE QUEMA MENOS'];
 
 // ---------- audio ----------
 let A, MG, DL, NB;
@@ -449,7 +450,7 @@ const reset = () => {
   while (gr < 5) gen();
   const R0 = room(2, 0);
   p = { x: R0.c[0], y: R0.c[1], vx: 0, vy: 0, r: 6, g: 0, sq: 0, f: 1, ph: 0, nx: 0, ny: -1 };
-  th = ca = rv = 0; q = pq = 0; L = LM = 100; UP = [0, 0, 0, 0, 0, 0]; aj = sdn = iv = ch = 0; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
+  th = ca = rv = 0; q = pq = 0; L = LM = 100; UP = UN.map(() => 0); aj = sdn = iv = ch = 0; score = cr = depth = 0; vY = p.y - 250; camx = p.x; camy = p.y; rec = 0; hb = 0;
   pbi = bn = 0; DM = [...Array(46)].map(() => ({ x: rr(0, U), y: rr(0, V), ph: rnd() * 7, s: rnd() < .3 ? 2 : 1 }));
 };
 const start = () => { reset(); st = 'play'; t = 0; ban = 2.2; S.n++; save(); sfx('go'); };
@@ -512,7 +513,7 @@ const upd = dt => {
   if (p.g > 0) p.ph += abs(svx) * dt * .16;
   if (p.g > 0) aj = UP[1]; // los saltos en el aire se recargan al pisar
   if ((jb -= dt) > 0 && (p.g > 0 || aj-- > 0)) {
-    const js = q == 1 ? 375 : 255, gx = sin(th), gy = cos(th), vg = p.vx * gx + p.vy * gy;
+    const js = (q == 1 ? 375 : 255) * (1 + .18 * UP[6]), gx = sin(th), gy = cos(th), vg = p.vx * gx + p.vy * gy;
     p.vx -= gx * (vg + js); p.vy -= gy * (vg + js); p.g = 0; jb = 0; sfx('jp');
     burst(p.x + gx * 5, p.y + gy * 5, '#fff4d0', 6, 45);
   }
@@ -532,14 +533,14 @@ const upd = dt => {
       const ex = b.x - b.ox, ey = b.y - b.oy, e = hypot(ex, ey); if (e > 46) { b.x = b.ox + ex / e * 46; b.y = b.oy + ey / e * 46; }
       // dispara brasas de su color: las de tu color no te hacen nada
       if ((b.f -= dt) < 0) { b.f = max(1.3, 2.4 - b.lv * .2); b.s.push([b.x, b.y, dx / d * 80, dy / d * 80, 3.5, b.k]); sfx('lp'); }
-      for (const s of b.s) { s[0] += s[2] * dt; s[1] += s[3] * dt; s[4] -= dt; if (s[5] != q && hypot(s[0] - p.x, s[1] - p.y) < p.r + 3) { s[4] = 0; if (!sv()) { L -= 8; sh = 3; sfx('hu'); burst(p.x, p.y, '#ff2e55', 8, 70); } } }
+      for (const s of b.s) { s[0] += s[2] * dt; s[1] += s[3] * dt; s[4] -= dt; if (s[5] != q && hypot(s[0] - p.x, s[1] - p.y) < p.r + 3) { s[4] = 0; if (!sv()) { L -= 8 * .6 ** UP[11]; sh = 3; sfx('hu'); burst(p.x, p.y, '#ff2e55', 8, 70); } } }
       b.s = b.s.filter(s => s[4] > 0);
       if (d < 15 + p.r && b.c < 0) {
         b.c = .7; p.vx = dx / d * 300; p.vy = dy / d * 300; sh = 4;
         if (q == b.k) {
-          b.h--; L = min(LM, L + 15); score += 100; fl = .3; burst(b.x, b.y, AX[q].c, 30, 150); sfx('bh'); b.k = (q + ri(1, 3)) % 4; b.s = [];
-          if (!b.h) { score += 400 * (b.lv + 1); L = min(LM, L + 30); vY -= 250; sh = 6; b.w = 3; ban = 0; burst(b.x, b.y, '#ffffff', 60, 220); sfx('go'); const a = ri(0, 5); ch = [a, (a + ri(1, 5)) % 6]; st = 'pick'; ot = 0; } // vencido: se abre la salida y la Sombra retrocede
-        } else if (!sv()) { L -= 18; sfx('hu'); burst(p.x, p.y, '#ff2e55', 12, 90); }
+          b.h = max(0, b.h - 1 - UP[9]); L = min(LM, L + 15); score += 100; fl = .3; burst(b.x, b.y, AX[q].c, 30, 150); sfx('bh'); b.k = (q + ri(1, 3)) % 4; b.s = [];
+          if (!b.h) { score += 400 * (b.lv + 1); L = min(LM, L + 30); vY -= 250; sh = 6; b.w = 3; ban = 0; burst(b.x, b.y, '#ffffff', 60, 220); sfx('go'); const a = ri(0, 11); ch = [a, (a + ri(1, 11)) % 12]; st = 'pick'; ot = 0; } // vencido: se abre la salida y la Sombra retrocede
+        } else if (!sv()) { L -= 18 * .6 ** UP[11]; sfx('hu'); burst(p.x, p.y, '#ff2e55', 12, 90); }
       }
     }
   }
@@ -550,13 +551,13 @@ const upd = dt => {
   near(R => {
     for (const [x, y, nx, ny] of R.sp) if (iv < 0 && hypot(x + nx * 5 - p.x, y + ny * 5 - p.y) < p.r + 3) { if (sv()) { p.vx = nx * 260; p.vy = ny * 260; } else die('TE PINCHASTE'); }
     for (const l of R.lp) if (l[2] > 0 && hypot(l[0] - p.x, l[1] + 6 - p.y) < 52) {
-      const [x, y] = l, g = max(0, min(l[2], 36 * dt, LM - L)); L += g; l[2] -= g; if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
+      const [x, y] = l, g = max(0, min(l[2], 36 * dt, LM - L)); L += g; l[2] -= g / (1 + UP[10]); if (rnd() < dt * 20) pa(x, y + 6, (p.x - x) * 2, (p.y - y) * 2, .4, '#ffd27a');
       if ((lpT -= dt) < 0) { lpT = .09; sfx('lp'); }
     }
   });
-  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8 + UP[3] * 14) { e.k = 1; L = min(LM, L + .4); score += 3; sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
+  for (const e of E) if (!e.k && e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 8 + UP[3] * 14) { e.k = 1; L = min(LM, L + .4 * (1 + .5 * UP[7])); score += 3 * (1 + UP[8]); sfx('sp', .03); burst(e.x, e.y, AX[q].c, 4, 40); }
   for (const e of E) if (!e.k && !e.s && hypot(e.x - p.x, e.y - p.y) < p.r + 7 + UP[3] * 14) {
-    e.k = 1; cr++; L = min(LM, L + 16); score += 25; sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
+    e.k = 1; cr++; L = min(LM, L + 16 * (1 + .5 * UP[7])); score += 25 * (1 + UP[8]); sfx('cr'); burst(e.x, e.y, '#e8fbff', 14, 90); burst(e.x, e.y, AX[q].c, 8, 60);
   }
   E = E.filter(e => !e.k && e.y > p.y - 600);
   // siguiente punto del camino (para la flecha guía)
